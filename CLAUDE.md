@@ -4,7 +4,7 @@ Este archivo es el contexto persistente del proyecto para Claude Code. Léelo an
 
 ## Estado del proyecto
 
-En definición. Aún no se ha escrito código de la aplicación. Se está validando el modelo de datos con el usuario antes de avanzar (ver AGENTS.md / historial de conversación para el detalle del proceso paso a paso acordado).
+Modelo de datos validado (ver sección más abajo). Aún no se ha escrito código de la aplicación — siguiente paso: scaffolding del proyecto (Next.js, Prisma, Docker Compose local), a confirmar con el usuario antes de ejecutar.
 
 ## Reglas de trabajo
 
@@ -78,6 +78,35 @@ Luego dos tablas en paralelo:
 - **REGISTRO DE ABONO**: Fecha | Descripción | Monto (ej. "03/08/2026, ABONO PROYECTO CIMENTACION, 4000")
 
 Al final: total gastos, total abonos, saldo positivo, gastos, ganancia, pendiente por cobrar.
+
+## Modelo de datos (validado)
+
+**Catálogos**
+- `business_lines` — id, name *(seed: las 5 líneas de negocio)*
+- `clients` (empresa cliente) — id, business_name, ruc, created_at
+- `client_contacts` (usuario del cliente, reutilizable entre proyectos) — id, client_id → clients, name, phone, email, created_at
+- `users` — id, name, email, password_hash, role (`owner` | `responsable`), created_at
+
+**Proyectos**
+- `projects` — id, name, location, client_id → clients, client_contact_id → client_contacts, business_line_id → business_lines, responsible_user_id → users (nullable), responsible_name (texto libre si no tiene cuenta), purchase_order_number, start_date, end_date, order_amount_no_igv, igv_amount, monthly_tax_percent (default 1%), annual_rent_percent (default 10%), status, created_at, updated_at.
+  `order_amount_no_igv` / `igv_amount` son el valor **actual** del proyecto — pueden editarse (adicionales/ampliaciones).
+- `project_order_revisions` (historial de cambios de monto) — id, project_id → projects, date, order_amount_no_igv, igv_amount, reason, created_by_user_id, created_at
+- `project_members` — project_id, user_id, role *(varios responsables pueden registrar movimientos en un mismo proyecto)*
+
+**Movimientos financieros**
+- `expenses` (gastos — siempre se registran, sin importar la fuente de pago) — id, project_id → projects, date, description, amount, payment_source (`personal` | `empresa`), paid_by_user_id → users (nullable), paid_by_name (texto libre), created_by_user_id, created_at
+- `expense_attachments` — id, expense_id → expenses, file_key (S3), file_type, uploaded_by_user_id, uploaded_at
+- `incomes` (abonos) — id, project_id → projects, date, description, amount, created_by_user_id, created_at
+- `reimbursements` (pago del reembolso, como movimiento propio) — id, project_id → projects, date, amount, description, paid_to_user_id → users, created_by_user_id, created_at
+- `reimbursement_items` — reimbursement_id → reimbursements, expense_id → expenses, amount_applied *(une un reembolso con uno o varios gastos personales; soporta reembolsos parciales o agrupados)*
+
+**Calculados (query/vista, no almacenados)**
+- Total gastos, total abonos, ganancia, saldo pendiente por proyecto.
+- Gastos personales aún no cubiertos por reembolso = `expenses` con `payment_source='personal'` cuya suma de `reimbursement_items.amount_applied` < `expenses.amount`.
+
+**Patrón "persona" (usuario del sistema u opcional texto libre)** aplicado en `projects.responsible_*` y `expenses.paid_by_*`.
+
+**Preparado para RRHH futuro:** `users` es genérico (solo auth); un futuro módulo de planillas/asistencia se conectaría vía `user_id` sin modificar este core.
 
 ## Escalabilidad (no construir todavía)
 
