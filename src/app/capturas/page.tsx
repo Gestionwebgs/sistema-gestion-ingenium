@@ -14,7 +14,7 @@ export default async function CapturasPendientesPage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const [captures, projects] = await Promise.all([
+  const [captures, projects, users] = await Promise.all([
     prisma.expenseCapture.findMany({
       where: { capturedByUserId: userId, status: "PENDIENTE" },
       orderBy: { capturedAt: "desc" },
@@ -23,6 +23,7 @@ export default async function CapturasPendientesPage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   const capturesWithUrls = await Promise.all(
@@ -109,12 +110,37 @@ export default async function CapturasPendientesPage() {
                     ))}
                   </select>
                   <select
+                    name="paidByUserId"
+                    defaultValue={userId}
+                    title="Responsable de la compra"
+                    className="rounded border border-brand-border px-2 py-1.5 text-sm"
+                  >
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
                     name="paymentSource"
                     defaultValue="EMPRESA"
                     className="rounded border border-brand-border px-2 py-1.5 text-sm"
                   >
                     <option value="EMPRESA">Pagado con la empresa</option>
                     <option value="PERSONAL">Pagado con mi dinero</option>
+                  </select>
+                  <select
+                    name="paymentMethod"
+                    defaultValue=""
+                    title="Método de pago"
+                    className="rounded border border-brand-border px-2 py-1.5 text-sm"
+                  >
+                    <option value="">Método (opcional)</option>
+                    <option value="EFECTIVO">Efectivo</option>
+                    <option value="YAPE_PLIN">Yape / Plin</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="TARJETA">Tarjeta</option>
+                    <option value="OTRO">Otro</option>
                   </select>
                   <input
                     type="date"

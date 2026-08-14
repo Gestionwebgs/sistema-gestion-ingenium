@@ -10,6 +10,14 @@ const formatSoles = (value: number) =>
 const formatDate = (date: Date) =>
   new Date(date).toLocaleDateString("es-PE", { timeZone: "UTC" });
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  EFECTIVO: "Efectivo",
+  YAPE_PLIN: "Yape/Plin",
+  TRANSFERENCIA: "Transferencia",
+  TARJETA: "Tarjeta",
+  OTRO: "Otro",
+};
+
 export default async function ProyectoDetailPage({
   params,
 }: {
@@ -18,19 +26,25 @@ export default async function ProyectoDetailPage({
   const { id } = await params;
   const session = await auth();
 
-  const project = await prisma.project.findUnique({
-    where: { id },
-    include: {
-      client: true,
-      clientContact: true,
-      businessLine: true,
-      expenses: {
-        orderBy: { date: "asc" },
-        include: { createdByUser: { select: { name: true } } },
+  const [project, users] = await Promise.all([
+    prisma.project.findUnique({
+      where: { id },
+      include: {
+        client: true,
+        clientContact: true,
+        businessLine: true,
+        expenses: {
+          orderBy: { date: "asc" },
+          include: {
+            paidByUser: { select: { name: true } },
+            createdByUser: { select: { name: true } },
+          },
+        },
+        incomes: { orderBy: { date: "asc" } },
       },
-      incomes: { orderBy: { date: "asc" } },
-    },
-  });
+    }),
+    prisma.user.findMany({ orderBy: { name: "asc" } }),
+  ]);
 
   if (!project) notFound();
 
@@ -147,13 +161,18 @@ export default async function ProyectoDetailPage({
                       <td className="px-3 py-2 text-brand-navy">
                         {expense.description}
                         <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium uppercase text-brand-blue">
-                          {expense.createdByUser.name}
+                          {expense.paidByUser?.name ?? expense.createdByUser.name}
                         </span>
                         <span className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
                           {expense.paymentSource === "PERSONAL"
                             ? "Personal"
                             : "Empresa"}
                         </span>
+                        {expense.paymentMethod && (
+                          <span className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
+                            {PAYMENT_METHOD_LABELS[expense.paymentMethod]}
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-right text-brand-navy">
                         S/. {formatSoles(Number(expense.amount))}
@@ -190,11 +209,36 @@ export default async function ProyectoDetailPage({
                   className="min-w-[8rem] flex-1 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <select
+                  name="paidByUserId"
+                  defaultValue={session!.user.id}
+                  title="Responsable de la compra"
+                  className="shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
+                >
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+                <select
                   name="paymentSource"
                   className="shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
                 >
                   <option value="EMPRESA">Empresa</option>
                   <option value="PERSONAL">Personal</option>
+                </select>
+                <select
+                  name="paymentMethod"
+                  defaultValue=""
+                  title="Método de pago"
+                  className="shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
+                >
+                  <option value="">Método (opcional)</option>
+                  <option value="EFECTIVO">Efectivo</option>
+                  <option value="YAPE_PLIN">Yape / Plin</option>
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="TARJETA">Tarjeta</option>
+                  <option value="OTRO">Otro</option>
                 </select>
                 <input
                   type="number"

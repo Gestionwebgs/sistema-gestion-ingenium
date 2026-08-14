@@ -12,7 +12,13 @@ Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Pris
 - Las cuentas de usuarios las crea el OWNER desde una pantalla (`/usuarios`) — no hay auto-registro.
 - El guard de permisos se hace a nivel de página (chequeo de `session.user.role`, redirect si no corresponde), no a nivel de `proxy.ts`.
 
-**Siguiente construcción (en este orden):** 1) gestión de usuarios, 2) reembolsos, 3) préstamos, 4) dashboard general. Ninguna requiere cambios al schema de Prisma — `User`, `Loan`, `Reimbursement`/`ReimbursementItem` ya existían, solo falta la UI.
+Usuarios, reembolsos, préstamos y panel general (con gráficos de torta/barras vía recharts) construidos y verificados. Menú móvil es un panel desplegable (hamburguesa) con la misma lista que el sidebar de escritorio, no una barra inferior limitada.
+
+**Gastos: "quién hizo la compra" vs "quién lo registró".** `paidByUserId`/`paidByName` en `Expense` es **siempre** quién hizo la compra (seleccionable en el formulario, no solo cuando es personal) — es lo que se muestra como badge en el registro de gastos. `createdByUserId` es un dato de auditoría (quién tecleó el registro), no se muestra. El OWNER puede registrar un gasto a nombre de cualquier responsable.
+
+**`payment_method` en `Expense`** (enum: `EFECTIVO` | `YAPE_PLIN` | `TRANSFERENCIA` | `TARJETA` | `OTRO`, nullable): el "medio pago" que imprime la factura del proveedor **no es confiable** (caso real probado: factura decía "EFECTIVO" pero el pago real fue por Yape/Plin, confirmado con el comprobante de la app). Por eso este campo es una elección manual del usuario al registrar el gasto, nunca algo que el OCR intente adivinar.
+
+**OCR probado con una factura electrónica real** (PDF con texto seleccionable): fecha, monto y proveedor se extraen bien. El número de comprobante requirió endurecer el regex a `[A-Z]\d{3}-\d{1,8}` (serie-correlativo peruano estándar) porque el patrón laxo anterior confundía fragmentos de la dirección (ej. "TDA. B1-8") con el número real. Con capturas de pantalla de apps de pago (Yape/Plin, sin RUC ni layout de factura) el monto se sigue extrayendo razonablemente bien, pero la fecha en texto ("14 agosto 2026") no matchea el regex de fecha numérica — se espera que el usuario la complete a mano en la pantalla de clasificación, que ya es siempre editable.
 
 **Nota Prisma 7:** el cliente requiere un driver adapter explícito (`@prisma/adapter-pg`), ya no basta con `DATABASE_URL` en el datasource — ver `src/lib/prisma.ts`.
 **Nota Next.js 16:** el archivo de middleware se llama `proxy.ts`, no `middleware.ts` (convención renombrada en esta versión). Su `matcher` debe excluir extensiones de archivos estáticos (`.png`, etc.) o rompe la optimización de imágenes de Next.

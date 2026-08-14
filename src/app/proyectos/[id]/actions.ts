@@ -14,8 +14,18 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
   const paymentSource = String(formData.get("paymentSource") ?? "EMPRESA") as
     | "PERSONAL"
     | "EMPRESA";
+  const paymentMethodRaw = String(formData.get("paymentMethod") ?? "");
+  const paymentMethod = paymentMethodRaw
+    ? (paymentMethodRaw as "EFECTIVO" | "YAPE_PLIN" | "TRANSFERENCIA" | "TARJETA" | "OTRO")
+    : null;
+  const paidByUserId =
+    String(formData.get("paidByUserId") ?? "").trim() || session.user.id;
 
   if (!description || amount <= 0) return;
+
+  const paidByUser = await prisma.user.findUniqueOrThrow({
+    where: { id: paidByUserId },
+  });
 
   await prisma.expense.create({
     data: {
@@ -24,10 +34,11 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
       description,
       amount,
       paymentSource,
-      // Quien registra el gasto es quien lo pagó de su bolsillo — necesario
-      // para que aparezca en la bandeja de reembolsos de esa persona.
-      paidByUserId: paymentSource === "PERSONAL" ? session.user.id : null,
-      paidByName: paymentSource === "PERSONAL" ? session.user.name : null,
+      paymentMethod,
+      // Quién hizo la compra — sin importar la fuente de pago (empresa o
+      // personal), para saber siempre a quién atribuirla.
+      paidByUserId: paidByUser.id,
+      paidByName: paidByUser.name,
       createdByUserId: session.user.id,
     },
   });

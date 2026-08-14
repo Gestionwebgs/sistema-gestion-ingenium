@@ -61,7 +61,10 @@ async function extractImageText(buffer: Buffer): Promise<string> {
 function extractFields(text: string): Omit<OcrResult, "rawText"> {
   if (!text || text.trim().length === 0) return { ...EMPTY_RESULT };
 
-  const docMatch = text.match(/\b([A-Z]{1,4}\d{1,3}-\d{1,8})\b/);
+  // Serie-correlativo peruano estándar: 1 letra + 3 dígitos, guion, hasta 8
+  // dígitos (ej. F005-00000655). Más estricto que antes para no confundirlo
+  // con fragmentos de dirección tipo "TDA. B1-8".
+  const docMatch = text.match(/\b([A-Z]\d{3}-\d{1,8})\b/);
 
   const dateMatch = text.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
   let extractedDate: Date | null = null;

@@ -82,12 +82,22 @@ export async function classifyCaptureAction(
   const paymentSource = String(formData.get("paymentSource") ?? "EMPRESA") as
     | "PERSONAL"
     | "EMPRESA";
+  const paymentMethodRaw = String(formData.get("paymentMethod") ?? "");
+  const paymentMethod = paymentMethodRaw
+    ? (paymentMethodRaw as "EFECTIVO" | "YAPE_PLIN" | "TRANSFERENCIA" | "TARJETA" | "OTRO")
+    : null;
   const operationCode =
     String(formData.get("operationCode") ?? "").trim() || null;
+  const paidByUserId =
+    String(formData.get("paidByUserId") ?? "").trim() || session.user.id;
 
   if (!description || amount <= 0) {
     throw new Error("Descripción y monto son requeridos");
   }
+
+  const paidByUser = await prisma.user.findUniqueOrThrow({
+    where: { id: paidByUserId },
+  });
 
   const expense = await prisma.expense.create({
     data: {
@@ -96,10 +106,10 @@ export async function classifyCaptureAction(
       description,
       amount,
       paymentSource,
+      paymentMethod,
       operationCode,
-      paidByUserId: paymentSource === "PERSONAL" ? session.user.id : null,
-      paidByName:
-        paymentSource === "PERSONAL" ? session.user.name : null,
+      paidByUserId: paidByUser.id,
+      paidByName: paidByUser.name,
       createdByUserId: session.user.id,
       attachments: {
         create: {

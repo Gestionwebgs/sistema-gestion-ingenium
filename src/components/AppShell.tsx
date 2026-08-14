@@ -34,6 +34,16 @@ export function AppShell({
 
   const iconClass = "h-4 w-4";
   const navItems: NavItem[] = [
+    ...(isOwner
+      ? ([
+          {
+            href: "/panel",
+            label: "Panel general",
+            icon: <LayoutDashboard className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "panel",
+          },
+        ] satisfies NavItem[])
+      : []),
     {
       href: "/proyectos",
       label: "Proyectos",
@@ -62,13 +72,6 @@ export function AppShell({
             section: "admin",
           },
           {
-            href: "/panel",
-            label: "Panel general",
-            icon: <LayoutDashboard className={iconClass} strokeWidth={1.75} />,
-            active: activeNav === "panel",
-            section: "admin",
-          },
-          {
             href: "/usuarios",
             label: "Usuarios",
             icon: <Users className={iconClass} strokeWidth={1.75} />,
@@ -91,22 +94,20 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      {/* Barra superior — solo en móvil */}
-      <header className="flex shrink-0 items-center justify-between bg-brand-navy px-4 py-3 text-white md:hidden">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white p-1">
-            <Image src="/logo.png" alt="Ingenium Service SAC" width={24} height={24} />
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-bold">Ingenium</p>
-          </div>
-        </div>
+      {/* Barra superior — solo en móvil. El botón que abre el menú y el logo
+          quedan juntos a la izquierda, del mismo lado por donde se despliega
+          el panel. */}
+      <header className="flex shrink-0 items-center gap-2 bg-brand-navy px-2 py-3 text-white md:hidden">
         <MobileMenu
           items={navItems}
           userName={userName}
           userRole={userRole}
           onSignOut={handleSignOut}
         />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white p-1">
+          <Image src="/logo.png" alt="Ingenium Service SAC" width={24} height={24} />
+        </div>
+        <p className="text-sm font-bold">Ingenium</p>
       </header>
 
       {/* Sidebar — solo en desktop */}
