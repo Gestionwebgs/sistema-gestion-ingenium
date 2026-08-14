@@ -94,15 +94,21 @@ Al final: total gastos, total abonos, saldo positivo, gastos, ganancia, pendient
 - `project_members` — project_id, user_id, role *(varios responsables pueden registrar movimientos en un mismo proyecto)*
 
 **Movimientos financieros**
-- `expenses` (gastos — siempre se registran, sin importar la fuente de pago) — id, project_id → projects, date, description, amount, payment_source (`personal` | `empresa`), paid_by_user_id → users (nullable), paid_by_name (texto libre), created_by_user_id, created_at
+- `expenses` (gastos — siempre se registran, sin importar la fuente de pago) — id, project_id → projects (**nullable**: sin proyecto = gasto general/administrativo de la empresa), date, description, operation_code (nº de comprobante/factura, texto libre), amount, payment_source (`personal` | `empresa`), paid_by_user_id → users (nullable), paid_by_name (texto libre), billable_to_client_contact_id → client_contacts (nullable, a quién se le debe cobrar/descontar este gasto), billable_amount (nullable, puede ser parcial respecto a `amount`), notes (texto libre), created_by_user_id, created_at
 - `expense_attachments` — id, expense_id → expenses, file_key (S3), file_type, uploaded_by_user_id, uploaded_at
-- `incomes` (abonos) — id, project_id → projects, date, description, amount, created_by_user_id, created_at
-- `reimbursements` (pago del reembolso, como movimiento propio) — id, project_id → projects, date, amount, description, paid_to_user_id → users, created_by_user_id, created_at
+- `incomes` (abonos) — id, project_id → projects (nullable, mismo criterio que expenses), date, description, amount, created_by_user_id, created_at
+- `reimbursements` (pago del reembolso, como movimiento propio; no atado a un solo proyecto porque puede cubrir gastos de varios) — id, date, amount, description, paid_to_user_id → users, created_by_user_id, created_at
 - `reimbursement_items` — reimbursement_id → reimbursements, expense_id → expenses, amount_applied *(une un reembolso con uno o varios gastos personales; soporta reembolsos parciales o agrupados)*
 
+**Préstamos**
+- `loans` (dinero prestado por terceros para financiar la operación) — id, lender_name (prestamista), borrower_user_id → users (nullable, quién recibe el préstamo — puede ser la empresa en general), amount, currency (`PEN` | `USD`, solo en este módulo), interest_amount, interest_currency (`PEN` | `USD`), loan_date, due_date, status (`pendiente` | `pagado`), notes, created_by_user_id, created_at
+  *(cubre tanto préstamos de terceros externos como deudas de tarjeta de crédito atribuidas a una persona — ej. "PRESTAMO MERVIS TDC")*
+
 **Calculados (query/vista, no almacenados)**
-- Total gastos, total abonos, ganancia, saldo pendiente por proyecto.
+- Total gastos, total abonos, ganancia, saldo pendiente por proyecto (y también a nivel empresa, agregando gastos/abonos sin proyecto).
 - Gastos personales aún no cubiertos por reembolso = `expenses` con `payment_source='personal'` cuya suma de `reimbursement_items.amount_applied` < `expenses.amount`.
+- Total a cobrar/descontar por cliente = suma de `billable_amount` agrupado por `billable_to_client_contact_id`.
+- Préstamos pendientes de pago = `loans` con `status='pendiente'`.
 
 **Patrón "persona" (usuario del sistema u opcional texto libre)** aplicado en `projects.responsible_*` y `expenses.paid_by_*`.
 
