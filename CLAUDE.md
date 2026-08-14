@@ -4,7 +4,15 @@ Este archivo es el contexto persistente del proyecto para Claude Code. Léelo an
 
 ## Estado del proyecto
 
-Modelo de datos validado (ver sección más abajo). Aún no se ha escrito código de la aplicación — siguiente paso: scaffolding del proyecto (Next.js, Prisma, Docker Compose local), a confirmar con el usuario antes de ejecutar.
+Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Aún sin UI ni lógica de negocio — siguiente paso a definir con el usuario (probablemente: NextAuth, catálogos base, primera pantalla de proyecto).
+
+### Entorno local
+
+- **Postgres:** `docker compose up -d` (puerto host `5433`, ver `docker-compose.yml`). `DATABASE_URL` en `.env` ya apunta ahí.
+- **MinIO** (equivalente local de S3): mismo `docker compose up -d`, consola en `http://localhost:9001`, API en `http://localhost:9000`. Credenciales dev en `.env`.
+- **Next.js dev server:** el puerto 3000 puede estar ocupado por otros proyectos del usuario en Docker (`lms-core-frontend-manicura`); usar `npm run dev -- -p 3001` si hay conflicto. `.claude/launch.json` está configurado con `autoPort: true` para la vista previa.
+- **Prisma:** schema en `prisma/schema.prisma`, cliente generado en `src/generated/prisma` (gitignored). `npx prisma migrate dev` para nuevas migraciones.
+- `.env` tiene valores de desarrollo local (no reales); `.env.example` documenta las variables sin secretos.
 
 ## Reglas de trabajo
 

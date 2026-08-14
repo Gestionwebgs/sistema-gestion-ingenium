@@ -1,0 +1,265 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+//
+// Modelo de datos validado con el usuario — ver CLAUDE.md para el contexto completo.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  RESPONSABLE
+}
+
+enum PaymentSource {
+  PERSONAL
+  EMPRESA
+}
+
+enum ProjectStatus {
+  ACTIVO
+  FINALIZADO
+  PAUSADO
+}
+
+enum LoanCurrency {
+  PEN
+  USD
+}
+
+enum LoanStatus {
+  PENDIENTE
+  PAGADO
+}
+
+model BusinessLine {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  projects Project[]
+
+  @@map("business_lines")
+}
+
+model Client {
+  id           String          @id @default(cuid())
+  businessName String          @map("business_name")
+  ruc          String?
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  contacts ClientContact[]
+  projects Project[]
+
+  @@map("clients")
+}
+
+model ClientContact {
+  id        String   @id @default(cuid())
+  clientId  String   @map("client_id")
+  client    Client   @relation(fields: [clientId], references: [id])
+  name      String
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  projects         Project[]
+  billableExpenses Expense[] @relation("ExpenseBillableToClientContact")
+
+  @@map("client_contacts")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(RESPONSABLE)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  responsibleProjects   Project[]              @relation("ProjectResponsible")
+  projectMemberships    ProjectMember[]
+  orderRevisions        ProjectOrderRevision[]
+  paidExpenses          Expense[]              @relation("ExpensePaidBy")
+  createdExpenses       Expense[]              @relation("ExpenseCreatedBy")
+  uploadedAttachments   ExpenseAttachment[]
+  createdIncomes        Income[]
+  reimbursementsReceived Reimbursement[]       @relation("ReimbursementPaidTo")
+  createdReimbursements Reimbursement[]        @relation("ReimbursementCreatedBy")
+  loansReceived         Loan[]                 @relation("LoanBorrower")
+  createdLoans          Loan[]                 @relation("LoanCreatedBy")
+
+  @@map("users")
+}
+
+model Project {
+  id                  String         @id @default(cuid())
+  name                String
+  location            String?
+  clientId            String?        @map("client_id")
+  client              Client?        @relation(fields: [clientId], references: [id])
+  clientContactId     String?        @map("client_contact_id")
+  clientContact       ClientContact? @relation(fields: [clientContactId], references: [id])
+  businessLineId      String         @map("business_line_id")
+  businessLine        BusinessLine   @relation(fields: [businessLineId], references: [id])
+  responsibleUserId   String?        @map("responsible_user_id")
+  responsibleUser     User?          @relation("ProjectResponsible", fields: [responsibleUserId], references: [id])
+  responsibleName     String?        @map("responsible_name")
+  purchaseOrderNumber String?        @map("purchase_order_number")
+  startDate           DateTime?      @map("start_date")
+  endDate             DateTime?      @map("end_date")
+  orderAmountNoIgv    Decimal        @default(0) @map("order_amount_no_igv") @db.Decimal(12, 2)
+  igvAmount           Decimal        @default(0) @map("igv_amount") @db.Decimal(12, 2)
+  monthlyTaxPercent   Decimal        @default(0.01) @map("monthly_tax_percent") @db.Decimal(5, 4)
+  annualRentPercent   Decimal        @default(0.10) @map("annual_rent_percent") @db.Decimal(5, 4)
+  status              ProjectStatus  @default(ACTIVO)
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  orderRevisions ProjectOrderRevision[]
+  members        ProjectMember[]
+  expenses       Expense[]
+  incomes        Income[]
+
+  @@map("projects")
+}
+
+// Historial de cambios al monto del proyecto (adicionales/ampliaciones).
+model ProjectOrderRevision {
+  id               String   @id @default(cuid())
+  projectId        String   @map("project_id")
+  project          Project  @relation(fields: [projectId], references: [id])
+  date             DateTime
+  orderAmountNoIgv Decimal  @map("order_amount_no_igv") @db.Decimal(12, 2)
+  igvAmount        Decimal  @map("igv_amount") @db.Decimal(12, 2)
+  reason           String?
+  createdByUserId  String   @map("created_by_user_id")
+  createdByUser    User     @relation(fields: [createdByUserId], references: [id])
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("project_order_revisions")
+}
+
+// Permite que varios responsables registren movimientos en un mismo proyecto.
+model ProjectMember {
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id])
+  userId    String  @map("user_id")
+  user      User    @relation(fields: [userId], references: [id])
+  role      String?
+
+  @@id([projectId, userId])
+  @@map("project_members")
+}
+
+// Gastos: siempre se registran, sin importar la fuente de pago.
+// projectId es opcional: sin proyecto = gasto general/administrativo de la empresa.
+model Expense {
+  id                         String         @id @default(cuid())
+  projectId                  String?        @map("project_id")
+  project                    Project?       @relation(fields: [projectId], references: [id])
+  date                       DateTime
+  description                String
+  operationCode              String?        @map("operation_code")
+  amount                     Decimal        @db.Decimal(12, 2)
+  paymentSource              PaymentSource  @map("payment_source")
+  paidByUserId               String?        @map("paid_by_user_id")
+  paidByUser                 User?          @relation("ExpensePaidBy", fields: [paidByUserId], references: [id])
+  paidByName                 String?        @map("paid_by_name")
+  billableToClientContactId  String?        @map("billable_to_client_contact_id")
+  billableToClientContact    ClientContact? @relation("ExpenseBillableToClientContact", fields: [billableToClientContactId], references: [id])
+  billableAmount             Decimal?       @map("billable_amount") @db.Decimal(12, 2)
+  notes                      String?
+  createdByUserId            String         @map("created_by_user_id")
+  createdByUser               User          @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt                  DateTime       @default(now()) @map("created_at")
+
+  attachments        ExpenseAttachment[]
+  reimbursementItems ReimbursementItem[]
+
+  @@map("expenses")
+}
+
+model ExpenseAttachment {
+  id               String   @id @default(cuid())
+  expenseId        String   @map("expense_id")
+  expense          Expense  @relation(fields: [expenseId], references: [id])
+  fileKey          String   @map("file_key")
+  fileType         String?  @map("file_type")
+  uploadedByUserId String   @map("uploaded_by_user_id")
+  uploadedByUser   User     @relation(fields: [uploadedByUserId], references: [id])
+  uploadedAt       DateTime @default(now()) @map("uploaded_at")
+
+  @@map("expense_attachments")
+}
+
+// Abonos/ingresos. projectId opcional por el mismo motivo que Expense.
+model Income {
+  id              String   @id @default(cuid())
+  projectId       String?  @map("project_id")
+  project         Project? @relation(fields: [projectId], references: [id])
+  date            DateTime
+  description     String
+  amount          Decimal  @db.Decimal(12, 2)
+  createdByUserId String   @map("created_by_user_id")
+  createdByUser   User     @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("incomes")
+}
+
+// El pago del reembolso en sí, como movimiento propio.
+// No está atado a un proyecto porque puede cubrir gastos de varios proyectos a la vez.
+model Reimbursement {
+  id              String   @id @default(cuid())
+  date            DateTime
+  amount          Decimal  @db.Decimal(12, 2)
+  description     String?
+  paidToUserId    String   @map("paid_to_user_id")
+  paidToUser      User     @relation("ReimbursementPaidTo", fields: [paidToUserId], references: [id])
+  createdByUserId String   @map("created_by_user_id")
+  createdByUser   User     @relation("ReimbursementCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  items ReimbursementItem[]
+
+  @@map("reimbursements")
+}
+
+// Une un reembolso con uno o varios gastos personales; soporta reembolsos parciales o agrupados.
+model ReimbursementItem {
+  reimbursementId String        @map("reimbursement_id")
+  reimbursement   Reimbursement @relation(fields: [reimbursementId], references: [id])
+  expenseId       String        @map("expense_id")
+  expense         Expense       @relation(fields: [expenseId], references: [id])
+  amountApplied   Decimal       @map("amount_applied") @db.Decimal(12, 2)
+
+  @@id([reimbursementId, expenseId])
+  @@map("reimbursement_items")
+}
+
+// Dinero prestado por terceros para financiar la operación (incluye deudas de tarjeta
+// de crédito atribuidas a una persona). Único módulo con soporte multi-moneda.
+model Loan {
+  id               String        @id @default(cuid())
+  lenderName       String        @map("lender_name")
+  borrowerUserId   String?       @map("borrower_user_id")
+  borrowerUser     User?         @relation("LoanBorrower", fields: [borrowerUserId], references: [id])
+  amount           Decimal       @db.Decimal(12, 2)
+  currency         LoanCurrency  @default(PEN)
+  interestAmount   Decimal?      @map("interest_amount") @db.Decimal(12, 2)
+  interestCurrency LoanCurrency? @map("interest_currency")
+  loanDate         DateTime      @map("loan_date")
+  dueDate          DateTime?     @map("due_date")
+  status           LoanStatus    @default(PENDIENTE)
+  notes            String?
+  createdByUserId  String        @map("created_by_user_id")
+  createdByUser    User          @relation("LoanCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  @@map("loans")
+}
