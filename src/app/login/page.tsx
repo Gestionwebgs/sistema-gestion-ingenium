@@ -16,8 +16,8 @@ export default function LoginPage() {
           <Image
             src="/logo.png"
             alt="Ingenium Service SAC"
-            width={72}
-            height={72}
+            width={140}
+            height={140}
             priority
           />
           <h1 className="mt-3 text-lg font-bold text-brand-navy">

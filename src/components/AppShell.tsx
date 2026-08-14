@@ -12,14 +12,15 @@ export function AppShell({ userName, userRole, children }: AppShellProps) {
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-60 shrink-0 flex-col bg-brand-navy text-white">
-        <div className="flex items-center gap-2 px-5 py-6">
-          <Image
-            src="/logo.png"
-            alt="Ingenium Service SAC"
-            width={36}
-            height={36}
-            className="rounded-sm"
-          />
+        <div className="flex items-center gap-3 px-5 py-6">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white p-1">
+            <Image
+              src="/logo.png"
+              alt="Ingenium Service SAC"
+              width={32}
+              height={32}
+            />
+          </div>
           <div className="leading-tight">
             <p className="text-sm font-bold">Ingenium</p>
             <p className="text-[11px] tracking-wide text-white/60">
