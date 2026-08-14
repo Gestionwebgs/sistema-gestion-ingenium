@@ -1,0 +1,112 @@
+"use client";
+
+import { useState } from "react";
+import { createReimbursementAction } from "./actions";
+
+const formatSoles = (value: number) =>
+  value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+type PendingExpense = {
+  id: string;
+  date: string;
+  description: string;
+  pending: number;
+  projectName: string | null;
+};
+
+export function PendingExpensesGroup({
+  userId,
+  userName,
+  expenses,
+}: {
+  userId: string;
+  userName: string;
+  expenses: PendingExpense[];
+}) {
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+
+  const toggle = (id: string) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const total = expenses
+    .filter((e) => checked.has(e.id))
+    .reduce((sum, e) => sum + e.pending, 0);
+
+  return (
+    <div className="rounded-lg border border-brand-border bg-brand-surface p-4">
+      <h3 className="mb-3 text-sm font-semibold text-brand-navy">{userName}</h3>
+
+      <form action={createReimbursementAction} className="space-y-3">
+        <input type="hidden" name="paidToUserId" value={userId} />
+
+        <div className="divide-y divide-brand-border rounded-md border border-brand-border">
+          {expenses.map((expense) => (
+            <label
+              key={expense.id}
+              className="flex items-center gap-3 px-3 py-2 text-sm"
+            >
+              <input
+                type="checkbox"
+                name="expenseIds"
+                value={expense.id}
+                checked={checked.has(expense.id)}
+                onChange={() => toggle(expense.id)}
+                className="h-4 w-4 shrink-0"
+              />
+              <span className="w-20 shrink-0 text-xs text-brand-muted">
+                {expense.date}
+              </span>
+              <span className="flex-1 text-brand-navy">
+                {expense.description}
+                {expense.projectName && (
+                  <span className="ml-2 text-xs text-brand-muted">
+                    ({expense.projectName})
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 font-medium text-brand-navy">
+                S/. {formatSoles(expense.pending)}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              name="date"
+              required
+              defaultValue={new Date().toISOString().slice(0, 10)}
+              className="rounded border border-brand-border px-2 py-1.5 text-xs"
+            />
+            <input
+              type="text"
+              name="description"
+              placeholder="Nota (opcional)"
+              className="rounded border border-brand-border px-2 py-1.5 text-xs"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-brand-navy">
+              Total: S/. {formatSoles(total)}
+            </span>
+            <button
+              type="submit"
+              disabled={checked.size === 0}
+              className="rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy disabled:opacity-40"
+            >
+              Registrar reembolso
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}

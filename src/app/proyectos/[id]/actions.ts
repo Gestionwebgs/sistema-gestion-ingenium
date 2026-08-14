@@ -14,7 +14,6 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
   const paymentSource = String(formData.get("paymentSource") ?? "EMPRESA") as
     | "PERSONAL"
     | "EMPRESA";
-  const paidByName = String(formData.get("paidByName") ?? "").trim() || null;
 
   if (!description || amount <= 0) return;
 
@@ -25,7 +24,10 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
       description,
       amount,
       paymentSource,
-      paidByName,
+      // Quien registra el gasto es quien lo pagó de su bolsillo — necesario
+      // para que aparezca en la bandeja de reembolsos de esa persona.
+      paidByUserId: paymentSource === "PERSONAL" ? session.user.id : null,
+      paidByName: paymentSource === "PERSONAL" ? session.user.name : null,
       createdByUserId: session.user.id,
     },
   });

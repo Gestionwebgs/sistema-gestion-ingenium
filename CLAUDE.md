@@ -4,7 +4,15 @@ Este archivo es el contexto persistente del proyecto para Claude Code. Léelo an
 
 ## Estado del proyecto
 
-Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Autenticación con Auth.js v5 (Credentials contra la tabla `users`, sesión JWT con id/role, login/logout, rutas protegidas vía `src/proxy.ts`) implementada y verificada. Seed (`prisma/seed.ts`, vía `npx prisma db seed`) crea las 5 líneas de negocio y el usuario OWNER real (credenciales en `.env`, no en el código — ver `SEED_OWNER_*`). Identidad visual (logo, colores de marca, íconos Lucide) aplicada. Primera pantalla de proyecto (`/proyectos/nuevo`, `/proyectos/[id]`) funcionando, con cálculo de saldo positivo verificado contra el Excel real del cliente. Captura rápida de facturas con OCR (`/capturas/nueva`, `/capturas`) implementada y verificada.
+Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Autenticación con Auth.js v5 (Credentials contra la tabla `users`, sesión JWT con id/role, login/logout, rutas protegidas vía `src/proxy.ts`) implementada y verificada. Seed (`prisma/seed.ts`, vía `npx prisma db seed`) crea las 5 líneas de negocio y el usuario OWNER real (credenciales en `.env`, no en el código — ver `SEED_OWNER_*`). Identidad visual (logo, colores de marca, íconos Lucide) aplicada. Primera pantalla de proyecto (`/proyectos/nuevo`, `/proyectos/[id]`) funcionando, con cálculo de saldo positivo verificado contra el Excel real del cliente. Captura rápida de facturas con OCR (`/capturas/nueva`, `/capturas`) implementada y verificada. App mobile-first (sidebar en desktop, barra inferior en celular). Desplegada por el usuario en una segunda máquina vía túnel de Cloudflare para que el cliente la pruebe (base de datos independiente de la de desarrollo).
+
+**Permisos por rol (`OWNER` vs `RESPONSABLE`):**
+- **OWNER**: todo — crear/editar usuarios, crear proyectos, préstamos (de cualquiera), reembolsos, dashboard general de toda la empresa.
+- **RESPONSABLE**: capturar/clasificar facturas, agregar gastos/abonos en proyectos, ver proyectos. Puede ver **sus propios préstamos** (solo lectura, no crea ni edita). No ve reembolsos, dashboard general, ni gestión de usuarios.
+- Las cuentas de usuarios las crea el OWNER desde una pantalla (`/usuarios`) — no hay auto-registro.
+- El guard de permisos se hace a nivel de página (chequeo de `session.user.role`, redirect si no corresponde), no a nivel de `proxy.ts`.
+
+**Siguiente construcción (en este orden):** 1) gestión de usuarios, 2) reembolsos, 3) préstamos, 4) dashboard general. Ninguna requiere cambios al schema de Prisma — `User`, `Loan`, `Reimbursement`/`ReimbursementItem` ya existían, solo falta la UI.
 
 **Nota Prisma 7:** el cliente requiere un driver adapter explícito (`@prisma/adapter-pg`), ya no basta con `DATABASE_URL` en el datasource — ver `src/lib/prisma.ts`.
 **Nota Next.js 16:** el archivo de middleware se llama `proxy.ts`, no `middleware.ts` (convención renombrada en esta versión). Su `matcher` debe excluir extensiones de archivos estáticos (`.png`, etc.) o rompe la optimización de imágenes de Next.

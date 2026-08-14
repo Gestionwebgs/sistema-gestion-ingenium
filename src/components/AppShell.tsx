@@ -1,11 +1,25 @@
 import Image from "next/image";
-import { FolderKanban, Camera, LogOut } from "lucide-react";
+import {
+  FolderKanban,
+  Camera,
+  LogOut,
+  Landmark,
+  HandCoins,
+  LayoutDashboard,
+  Users,
+} from "lucide-react";
 import { signOut } from "@/auth";
 
 type AppShellProps = {
   userName: string;
   userRole: string;
-  activeNav?: "proyectos" | "capturas";
+  activeNav?:
+    | "proyectos"
+    | "capturas"
+    | "prestamos"
+    | "reembolsos"
+    | "panel"
+    | "usuarios";
   children: React.ReactNode;
 };
 
@@ -15,6 +29,8 @@ export function AppShell({
   activeNav = "proyectos",
   children,
 }: AppShellProps) {
+  const isOwner = userRole === "OWNER";
+
   const navLinkClass = (isActive: boolean) =>
     `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition ${
       isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -77,6 +93,36 @@ export function AppShell({
             <Camera className="h-4 w-4" strokeWidth={1.75} />
             Facturas pendientes
           </a>
+          <a href="/prestamos" className={navLinkClass(activeNav === "prestamos")}>
+            <Landmark className="h-4 w-4" strokeWidth={1.75} />
+            {isOwner ? "Préstamos" : "Mis préstamos"}
+          </a>
+
+          {isOwner && (
+            <>
+              <div className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+                Administración
+              </div>
+              <a
+                href="/reembolsos"
+                className={navLinkClass(activeNav === "reembolsos")}
+              >
+                <HandCoins className="h-4 w-4" strokeWidth={1.75} />
+                Reembolsos
+              </a>
+              <a href="/panel" className={navLinkClass(activeNav === "panel")}>
+                <LayoutDashboard className="h-4 w-4" strokeWidth={1.75} />
+                Panel general
+              </a>
+              <a
+                href="/usuarios"
+                className={navLinkClass(activeNav === "usuarios")}
+              >
+                <Users className="h-4 w-4" strokeWidth={1.75} />
+                Usuarios
+              </a>
+            </>
+          )}
         </nav>
 
         <div className="border-t border-white/10 px-3 py-4">
@@ -92,7 +138,9 @@ export function AppShell({
 
       <main className="flex-1 bg-background pb-16 md:pb-0">{children}</main>
 
-      {/* Barra inferior — solo en móvil */}
+      {/* Barra inferior — solo en móvil. Solo lo esencial para el trabajo en campo;
+          las pantallas de administración (reembolsos, panel, usuarios) quedan
+          en el sidebar de escritorio. */}
       <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-brand-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
         <a
           href="/"
@@ -111,6 +159,15 @@ export function AppShell({
         >
           <Camera className="h-5 w-5" strokeWidth={1.75} />
           Facturas
+        </a>
+        <a
+          href="/prestamos"
+          className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
+            activeNav === "prestamos" ? "text-brand-blue" : "text-brand-muted"
+          }`}
+        >
+          <Landmark className="h-5 w-5" strokeWidth={1.75} />
+          Préstamos
         </a>
       </nav>
     </div>
