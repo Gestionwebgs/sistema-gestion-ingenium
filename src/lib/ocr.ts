@@ -29,6 +29,13 @@ export async function runOcr(
     rawText = await extractImageText(buffer);
   }
 
+  // Postgres/UTF8 rechaza el byte nulo (0x00) dentro de una columna de texto
+  // ("invalid byte sequence for encoding "UTF8": 0x00"). Tanto pdf-parse como
+  // tesseract.js pueden devolver algún 0x00 suelto con ciertos PDFs/imágenes
+  // dañados o con codificación rara — se limpia acá, antes de derivar
+  // cualquier otro campo (vendor, N° de comprobante) de este texto.
+  rawText = rawText.replace(/\u0000/g, "");
+
   return { rawText, ...extractFields(rawText) };
 }
 
