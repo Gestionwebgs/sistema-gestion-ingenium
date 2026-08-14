@@ -15,8 +15,8 @@ export default async function Home() {
       userName={session!.user.name ?? ""}
       userRole={session!.user.role}
     >
-      <div className="p-8">
-        <header className="mb-8 flex items-center justify-between">
+      <div className="p-4 sm:p-8">
+        <header className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-bold text-brand-navy">Proyectos</h1>
             <p className="text-sm text-brand-muted">
@@ -25,7 +25,7 @@ export default async function Home() {
           </div>
           <a
             href="/proyectos/nuevo"
-            className="flex items-center gap-2 rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy"
+            className="flex items-center justify-center gap-2 rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy"
           >
             <Plus className="h-4 w-4" strokeWidth={2} />
             Nuevo proyecto

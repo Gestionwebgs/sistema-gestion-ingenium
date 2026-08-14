@@ -38,7 +38,7 @@ export default async function CapturasPendientesPage() {
       userRole={session!.user.role}
       activeNav="capturas"
     >
-      <div className="mx-auto max-w-3xl p-8">
+      <div className="mx-auto max-w-3xl p-4 sm:p-8">
         <header className="mb-6">
           <h1 className="text-xl font-bold text-brand-navy">
             Mis facturas pendientes
@@ -62,7 +62,7 @@ export default async function CapturasPendientesPage() {
               <form
                 key={capture.id}
                 action={classifyCapture}
-                className="flex gap-4 rounded-lg border border-brand-border bg-brand-surface p-4"
+                className="flex flex-col gap-4 rounded-lg border border-brand-border bg-brand-surface p-4 sm:flex-row"
               >
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border border-brand-border bg-gray-50">
                   {isImage ? (

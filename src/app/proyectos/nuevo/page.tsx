@@ -15,7 +15,7 @@ export default async function NuevoProyectoPage() {
       userName={session!.user.name ?? ""}
       userRole={session!.user.role}
     >
-      <div className="mx-auto max-w-2xl p-8">
+      <div className="mx-auto max-w-2xl p-4 sm:p-8">
         <header className="mb-6">
           <h1 className="text-xl font-bold text-brand-navy">Nuevo proyecto</h1>
           <p className="text-sm text-brand-muted">
@@ -46,7 +46,7 @@ export default async function NuevoProyectoPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="location"
@@ -87,7 +87,7 @@ export default async function NuevoProyectoPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="responsibleName"
@@ -118,7 +118,7 @@ export default async function NuevoProyectoPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="startDate"
@@ -152,7 +152,7 @@ export default async function NuevoProyectoPage() {
 
           <section className="space-y-4 rounded-lg border border-brand-border bg-brand-surface p-5">
             <h2 className="text-sm font-semibold text-brand-navy">Cliente</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="clientBusinessName"

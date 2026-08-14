@@ -58,7 +58,7 @@ export default async function ProyectoDetailPage({
       userName={session!.user.name ?? ""}
       userRole={session!.user.role}
     >
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <header className="mb-6">
           <a
             href="/"
@@ -75,7 +75,7 @@ export default async function ProyectoDetailPage({
           </p>
         </header>
 
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <InfoCard label="Cliente" value={project.client?.businessName ?? "—"} />
           <InfoCard
             label="Contacto"
@@ -100,7 +100,7 @@ export default async function ProyectoDetailPage({
           <h2 className="mb-4 text-sm font-semibold text-brand-navy">
             Control financiero
           </h2>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <MoneyStat label="Monto sin IGV" value={orderAmountNoIgv} />
             <MoneyStat label="IGV" value={igvAmount} />
             <MoneyStat label="Monto total" value={montoTotal} highlight />
@@ -121,7 +121,7 @@ export default async function ProyectoDetailPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <section>
             <h2 className="mb-3 text-sm font-semibold text-brand-navy">
               Registro de gastos
