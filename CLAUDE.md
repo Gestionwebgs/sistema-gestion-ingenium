@@ -27,7 +27,6 @@ Usuarios, reembolsos, préstamos y panel general (con gráficos de torta/barras 
 **Visión del producto:** el usuario piensa esta plataforma como una intranet de la empresa, no solo como gestión de proyectos/gastos — va a seguir creciendo con más módulos. Tener esto en cuenta en decisiones de arquitectura (no diseñar como si el alcance fuera fijo).
 
 **Sistema de notificaciones — versión 1 construida** (el usuario pidió adelantarla, no hizo falta esperar): contador rojo sobre "Facturas pendientes" en el menú (por usuario, cuenta sus propias `ExpenseCapture` con `status: PENDIENTE`) y tarjeta "Facturas sin confirmar" en el Panel general con el total de **todos** los responsables. `AppShell` es ahora un server component `async` que hace esta consulta. **Pendiente todavía**: alertas fuera del sistema (correo/otro canal) cuando algo queda mucho tiempo sin confirmar — no decidido, requiere elegir proveedor de correo.
-- Pendiente de confirmar con el usuario si además quiere alertas fuera del sistema (correo/otro canal) cuando algo queda mucho tiempo sin confirmar — eso requiere elegir un proveedor de correo y más infraestructura, no decidido aún.
 
 **Nota Prisma 7:** el cliente requiere un driver adapter explícito (`@prisma/adapter-pg`), ya no basta con `DATABASE_URL` en el datasource — ver `src/lib/prisma.ts`.
 **Nota Next.js 16:** el archivo de middleware se llama `proxy.ts`, no `middleware.ts` (convención renombrada en esta versión). Su `matcher` debe excluir extensiones de archivos estáticos (`.png`, etc.) o rompe la optimización de imágenes de Next.
