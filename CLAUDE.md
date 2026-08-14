@@ -4,7 +4,10 @@ Este archivo es el contexto persistente del proyecto para Claude Code. Léelo an
 
 ## Estado del proyecto
 
-Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Aún sin UI ni lógica de negocio — siguiente paso a definir con el usuario (probablemente: NextAuth, catálogos base, primera pantalla de proyecto).
+Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Autenticación con Auth.js v5 (Credentials contra la tabla `users`, sesión JWT con id/role, login/logout, rutas protegidas vía `src/proxy.ts`) implementada y verificada. Seed (`prisma/seed.ts`, vía `npx prisma db seed`) crea las 5 líneas de negocio y el usuario OWNER real (credenciales en `.env`, no en el código — ver `SEED_OWNER_*`). Siguiente paso: primera pantalla de proyecto.
+
+**Nota Prisma 7:** el cliente requiere un driver adapter explícito (`@prisma/adapter-pg`), ya no basta con `DATABASE_URL` en el datasource — ver `src/lib/prisma.ts`.
+**Nota Next.js 16:** el archivo de middleware se llama `proxy.ts`, no `middleware.ts` (convención renombrada en esta versión).
 
 ### Entorno local
 
