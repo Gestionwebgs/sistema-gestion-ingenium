@@ -51,6 +51,13 @@ export default async function CapturasPendientesPage() {
           </p>
         </header>
 
+        <a
+          href="/capturas/nueva"
+          className="mb-4 block rounded-lg border border-dashed border-brand-border bg-brand-surface py-4 text-center text-sm text-brand-blue hover:underline"
+        >
+          + Capturar otra factura
+        </a>
+
         <div className="space-y-4">
           {capturesWithUrls.map(({ capture, url }) => {
             const classifyCapture = classifyCaptureAction.bind(
@@ -182,12 +189,9 @@ export default async function CapturasPendientesPage() {
           })}
 
           {captures.length === 0 && (
-            <a
-              href="/capturas/nueva"
-              className="block rounded-lg border border-dashed border-brand-border bg-brand-surface py-12 text-center text-sm text-brand-blue hover:underline"
-            >
-              Capturar una factura →
-            </a>
+            <p className="py-12 text-center text-sm text-brand-muted">
+              No tenés facturas pendientes de clasificar.
+            </p>
           )}
         </div>
       </div>
