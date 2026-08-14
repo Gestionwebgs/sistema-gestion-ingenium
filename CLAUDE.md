@@ -170,3 +170,31 @@ Diseñar el modelo de datos y la arquitectura pensando en que más adelante se a
 2. Generar este CLAUDE.md con el contexto completo.
 3. Proponer y validar con el usuario el modelo de datos (tablas y relaciones) antes de escribir cualquier código.
 4. A partir de ahí, avanzar paso a paso, esperando confirmación del usuario después de cada paso antes de continuar con el siguiente.
+
+## Sesión de despliegue local + hallazgos pendientes (2026-08-14)
+
+### Flujo de trabajo acordado entre las dos computadoras
+
+- **Desarrollo de código** (nuevas funciones, cambios que pida el cliente): se hace en la computadora de la oficina, con Claude Code, como hasta ahora. Se sube con `git push`.
+- **Esta segunda computadora (Windows, Git Bash)**: se usa para alojar una demo accesible por internet para que el cliente pruebe. Stack: `docker compose up -d` (Postgres local puerto 5433 + MinIO puerto 9000/9001), `npm run build && npm run start` (puerto 3000), y `cloudflared tunnel --url http://localhost:3000` (Quick Tunnel, sin cuenta de Cloudflare, URL tipo `*.trycloudflare.com`, cambia cada vez que se reinicia cloudflared).
+- Antes de trabajar en cualquiera de las dos computadoras: `git pull`. Después de terminar un cambio: `git push`. Nunca editar código en las dos a la vez sin sincronizar entre medio.
+- Al llegar un cambio nuevo desde GitHub a esta computadora de demo: parar `npm run start` (Ctrl+C, sin tocar la terminal de cloudflared), `git pull`, `npm install`, si tocó `schema.prisma` correr `npx prisma generate && npx prisma migrate deploy` (no borra datos existentes), `npm run build`, `npm run start` de nuevo. El túnel de cloudflared no necesita reiniciarse — sigue apuntando al mismo puerto, así que la URL que ya tiene el cliente no cambia.
+
+### Las dos bases de datos son independientes
+
+Cada computadora tiene su propio Postgres local (Docker), sin sincronización automática. Si hay que mover datos de una a la otra, usar `pg_dump`/`psql` contra los contenedores de Docker de cada lado (pedirle a Claude el comando exacto cuando haga falta — depende del nombre del contenedor en cada máquina). La solución de fondo, ya prevista en la sección "Plan de despliegue en fases" de este mismo documento, es pasar a una única base de datos compartida (AWS RDS) en cuanto se avance a la fase 2.
+
+### Proyecto real de referencia cargado en la demo local
+
+Se cargó como demo el proyecto real **CIMENTACION / PAMOLSA** (cliente QROMA, contacto MARCO, responsable RAUL QUINTERO, línea de negocio Obras Civiles, orden S/ 33,827.88 + IGV S/ 6,089.02) usando un script puntual (`prisma/seed-pamolsa.ts`, no forma parte del seed principal). Los gastos y abonos de este proyecto se cargan a mano desde la interfaz, no por script.
+
+### Hallazgos de funcionalidad al revisar los Excel reales de la empresa (GASTOS_E_INGRESOS_2026*.xlsx)
+
+Se revisaron a fondo, además de la hoja "CIMENTACION PAMOLSA" (ya usada de ejemplo en el modelo de datos), las hojas: "Compras y gastos [MES]" (Febrero–Agosto), "Relación de gastos Mervis/Raul/Grelimar/Anggie", "Relación de préstamos", y varias hojas de proyectos reales adicionales ("OC 8070011577" / Monorriel y Pivot para QROMA, "MTTO PETAR en la Fábrica de Mondelez" para VIKINGO, dos hojas de "Suministro e instalación de polipasto" para QROMA). Pendiente evaluar y construir:
+
+1. **Módulo de préstamos (UI)**: el modelo `Loan` ya existe en `schema.prisma`, pero no hay evidencia en el estado actual del proyecto de que exista pantalla para crear/listar/marcar como pagado un préstamo. La hoja "Relación de préstamos" del Excel real tiene: prestamista, monto en soles, monto en dólares, interés en cada moneda, fecha de préstamo, fecha de pago — coincide con los campos del modelo.
+2. **Reporte / vista de "cuenta corriente" por persona**: el Excel real lleva una hoja separada por colaborador (Mervis, Raúl, Grelimar, Anggie) con sus gastos pagados de su bolsillo y sus abonos/reembolsos recibidos, para saber cuánto se le debe a cada uno en un momento dado. El modelo de datos ya soporta esto (`payment_source` + `paid_by_name`/`paid_by_user_id` + `reimbursements`/`reimbursement_items`), pero falta confirmar si existe una vista/reporte dedicado en la interfaz que muestre este saldo pendiente por persona, o si hay que construirlo.
+3. **Gastos generales de la empresa sin proyecto asociado**: las hojas mensuales "Compras y gastos [MES]" registran gastos marcados "PAGO INGENIUM" que no pertenecen a ningún proyecto específico. El modelo ya permite `project_id` nulo en `expenses`/`incomes`, pero falta confirmar que la pantalla de carga de gastos actual permite guardar un gasto sin elegir proyecto.
+4. **Multiproyecto**: confirmado con datos reales que la empresa maneja varios proyectos activos en paralelo para el mismo cliente (ej. dos suministros de polipasto distintos para QROMA) y para clientes distintos (QROMA, VIKINGO). El modelo de datos ya lo soporta sin cambios — no es una tarea pendiente, solo una confirmación.
+
+No se tocó código de la aplicación en esta sesión (solo se cargaron datos generales de un proyecto de ejemplo). Estos hallazgos quedan documentados para evaluarlos y priorizarlos en la próxima sesión de desarrollo.
