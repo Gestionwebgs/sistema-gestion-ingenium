@@ -168,24 +168,24 @@ export default async function ProyectoDetailPage({
               </table>
               <form
                 action={addExpense}
-                className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2 border-t border-brand-border p-3"
+                className="flex flex-wrap items-center gap-2 border-t border-brand-border p-3"
               >
                 <input
                   type="date"
                   name="date"
                   required
-                  className="rounded border border-brand-border px-2 py-1.5 text-xs"
+                  className="w-[9.5rem] shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <input
                   type="text"
                   name="description"
                   placeholder="Descripción"
                   required
-                  className="rounded border border-brand-border px-2 py-1.5 text-xs"
+                  className="min-w-[8rem] flex-1 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <select
                   name="paymentSource"
-                  className="rounded border border-brand-border px-2 py-1.5 text-xs"
+                  className="shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
                 >
                   <option value="EMPRESA">Empresa</option>
                   <option value="PERSONAL">Personal</option>
@@ -197,11 +197,11 @@ export default async function ProyectoDetailPage({
                   name="amount"
                   placeholder="Monto"
                   required
-                  className="w-24 rounded border border-brand-border px-2 py-1.5 text-xs"
+                  className="w-20 shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <button
                   type="submit"
-                  className="rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-navy"
+                  className="shrink-0 rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-navy"
                 >
                   Agregar
                 </button>
@@ -250,20 +250,20 @@ export default async function ProyectoDetailPage({
               </table>
               <form
                 action={addIncome}
-                className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 border-t border-brand-border p-3"
+                className="flex flex-wrap items-center gap-2 border-t border-brand-border p-3"
               >
                 <input
                   type="date"
                   name="date"
                   required
-                  className="rounded border border-brand-border px-2 py-1.5 text-xs"
+                  className="w-[9.5rem] shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <input
                   type="text"
                   name="description"
                   placeholder="Descripción"
                   required
-                  className="rounded border border-brand-border px-2 py-1.5 text-xs"
+                  className="min-w-[8rem] flex-1 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <input
                   type="number"
@@ -272,11 +272,11 @@ export default async function ProyectoDetailPage({
                   name="amount"
                   placeholder="Monto"
                   required
-                  className="w-24 rounded border border-brand-border px-2 py-1.5 text-xs"
+                  className="w-20 shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <button
                   type="submit"
-                  className="rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-navy"
+                  className="shrink-0 rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-navy"
                 >
                   Agregar
                 </button>
