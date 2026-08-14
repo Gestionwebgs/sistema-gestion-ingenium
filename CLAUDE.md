@@ -20,6 +20,15 @@ Usuarios, reembolsos, préstamos y panel general (con gráficos de torta/barras 
 
 **OCR probado con una factura electrónica real** (PDF con texto seleccionable): fecha, monto y proveedor se extraen bien. El número de comprobante requirió endurecer el regex a `[A-Z]\d{3}-\d{1,8}` (serie-correlativo peruano estándar) porque el patrón laxo anterior confundía fragmentos de la dirección (ej. "TDA. B1-8") con el número real. Con capturas de pantalla de apps de pago (Yape/Plin, sin RUC ni layout de factura) el monto se sigue extrayendo razonablemente bien, pero la fecha en texto ("14 agosto 2026") no matchea el regex de fecha numérica — se espera que el usuario la complete a mano en la pantalla de clasificación, que ya es siempre editable.
 
+## Backlog (anotado, no construir todavía)
+
+**Visión del producto:** el usuario piensa esta plataforma como una intranet de la empresa, no solo como gestión de proyectos/gastos — va a seguir creciendo con más módulos. Tener esto en cuenta en decisiones de arquitectura (no diseñar como si el alcance fuera fijo).
+
+**Sistema de notificaciones** (pedido explícitamente para "un par de sesiones más", no ahora): cuando alguien sube una factura a "Facturas pendientes" y no la confirma, debe notificarse. Versión acordada como práctica (sin infraestructura de correo/push todavía):
+- Contador en rojo sobre "Facturas pendientes" en el menú, por usuario (cuántas propias tiene sin confirmar).
+- Tarjeta en el Panel general con el total de facturas sin confirmar de **todos** los responsables, para que el OWNER detecte atrasos.
+- Pendiente de confirmar con el usuario si además quiere alertas fuera del sistema (correo/otro canal) cuando algo queda mucho tiempo sin confirmar — eso requiere elegir un proveedor de correo y más infraestructura, no decidido aún.
+
 **Nota Prisma 7:** el cliente requiere un driver adapter explícito (`@prisma/adapter-pg`), ya no basta con `DATABASE_URL` en el datasource — ver `src/lib/prisma.ts`.
 **Nota Next.js 16:** el archivo de middleware se llama `proxy.ts`, no `middleware.ts` (convención renombrada en esta versión). Su `matcher` debe excluir extensiones de archivos estáticos (`.png`, etc.) o rompe la optimización de imágenes de Next.
 **Nota tesseract.js:** necesita estar en `serverExternalPackages` (`next.config.ts`) para no romperse con el bundling de Turbopack — intenta hacer un `require` dinámico de su worker que el bundler no resuelve bien.
