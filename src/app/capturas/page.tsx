@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { getFileSignedUrl } from "@/lib/s3";
-import { classifyCaptureAction } from "./actions";
+import { classifyCaptureAction, discardCaptureAction } from "./actions";
 import { FileText } from "lucide-react";
 
 function toDateInputValue(date: Date | null): string {
@@ -64,12 +64,12 @@ export default async function CapturasPendientesPage() {
               null,
               capture.id
             );
+            const discardCapture = discardCaptureAction.bind(null, capture.id);
             const isImage = capture.fileType?.startsWith("image/");
 
             return (
-              <form
+              <div
                 key={capture.id}
-                action={classifyCapture}
                 className="flex flex-col gap-4 rounded-lg border border-brand-border bg-brand-surface p-4 sm:flex-row"
               >
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border border-brand-border bg-gray-50">
@@ -93,7 +93,10 @@ export default async function CapturasPendientesPage() {
                   )}
                 </div>
 
-                <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-3">
+                <form
+                  action={classifyCapture}
+                  className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-3"
+                >
                   <div className="col-span-2 sm:col-span-3">
                     <input
                       type="text"
@@ -183,8 +186,18 @@ export default async function CapturasPendientesPage() {
                   >
                     Confirmar gasto
                   </button>
-                </div>
-              </form>
+                </form>
+
+                <form action={discardCapture} className="shrink-0 sm:self-start">
+                  <button
+                    type="submit"
+                    title="Descarta la captura sin crear un gasto. No borra el archivo, solo la saca de pendientes — queda registrado quién y cuándo, se puede auditar/recuperar después."
+                    className="text-xs font-medium text-red-600 hover:underline"
+                  >
+                    Descartar
+                  </button>
+                </form>
+              </div>
             );
           })}
 

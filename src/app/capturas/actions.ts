@@ -154,3 +154,38 @@ export async function classifyCaptureAction(
   revalidatePath("/capturas");
   if (projectId) revalidatePath(`/proyectos/${projectId}`);
 }
+
+// Descarte reversible de una captura pendiente (ej. el OCR no leyó nada útil
+// y no corresponde a un gasto real). No borra la fila ni el archivo en
+// S3/MinIO — solo la saca de "pendientes" y deja registrado quién y cuándo,
+// para poder auditar o recuperar si hace falta. Solo puede descartarla quien
+// la capturó, o el OWNER.
+export async function discardCaptureAction(captureId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("No autenticado");
+
+  const capture = await prisma.expenseCapture.findUnique({
+    where: { id: captureId },
+  });
+  if (!capture) throw new Error("Captura no encontrada");
+
+  const isOwnCapture = capture.capturedByUserId === session.user.id;
+  const isOwner = session.user.role === "OWNER";
+  if (!isOwnCapture && !isOwner) {
+    throw new Error("No tenés permiso para descartar esta captura");
+  }
+  if (capture.status !== "PENDIENTE") {
+    throw new Error("Esta captura ya fue clasificada o descartada");
+  }
+
+  await prisma.expenseCapture.update({
+    where: { id: captureId },
+    data: {
+      status: "DESCARTADA",
+      discardedAt: new Date(),
+      discardedByUserId: session.user.id,
+    },
+  });
+
+  revalidatePath("/capturas");
+}

@@ -41,6 +41,7 @@ enum LoanStatus {
 enum CaptureStatus {
   PENDIENTE
   CLASIFICADO
+  DESCARTADA
 }
 
 // El "medio pago" que imprime el proveedor en la factura no es confiable
@@ -109,6 +110,7 @@ model User {
   loansReceived         Loan[]                 @relation("LoanBorrower")
   createdLoans          Loan[]                 @relation("LoanCreatedBy")
   expenseCaptures       ExpenseCapture[]
+  discardedCaptures     ExpenseCapture[]       @relation("ExpenseCaptureDiscardedBy")
 
   @@map("users")
 }
@@ -223,6 +225,12 @@ model ExpenseCapture {
   expenseId                 String?       @unique @map("expense_id")
   expense                   Expense?      @relation(fields: [expenseId], references: [id])
   classifiedAt              DateTime?     @map("classified_at")
+  // Descarte reversible: no se borra la fila ni el archivo en S3/MinIO, solo
+  // se saca de "pendientes" y queda registrado quién y cuándo lo descartó,
+  // por si hace falta auditar o recuperar (ver CLAUDE.md).
+  discardedAt               DateTime?     @map("discarded_at")
+  discardedByUserId         String?       @map("discarded_by_user_id")
+  discardedByUser           User?         @relation("ExpenseCaptureDiscardedBy", fields: [discardedByUserId], references: [id])
 
   @@map("expense_captures")
 }
