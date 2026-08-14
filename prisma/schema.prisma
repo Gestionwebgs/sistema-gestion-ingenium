@@ -38,6 +38,11 @@ enum LoanStatus {
   PAGADO
 }
 
+enum CaptureStatus {
+  PENDIENTE
+  CLASIFICADO
+}
+
 model BusinessLine {
   id       String    @id @default(cuid())
   name     String    @unique
@@ -92,6 +97,7 @@ model User {
   createdReimbursements Reimbursement[]        @relation("ReimbursementCreatedBy")
   loansReceived         Loan[]                 @relation("LoanBorrower")
   createdLoans          Loan[]                 @relation("LoanCreatedBy")
+  expenseCaptures       ExpenseCapture[]
 
   @@map("users")
 }
@@ -180,8 +186,33 @@ model Expense {
 
   attachments        ExpenseAttachment[]
   reimbursementItems ReimbursementItem[]
+  capture            ExpenseCapture?
 
   @@map("expenses")
+}
+
+// Bandeja de fotos de facturas pendientes de clasificar. Captura instantánea desde
+// el celular (sin llenar nada); el OCR intenta adivinar los datos; la persona que
+// tomó la foto la clasifica después (elige proyecto, personal/empresa, descripción),
+// momento en el que se crea el Expense real + su ExpenseAttachment.
+model ExpenseCapture {
+  id                        String        @id @default(cuid())
+  capturedByUserId          String        @map("captured_by_user_id")
+  capturedByUser            User          @relation(fields: [capturedByUserId], references: [id])
+  fileKey                   String        @map("file_key")
+  fileType                  String?       @map("file_type")
+  capturedAt                DateTime      @default(now()) @map("captured_at")
+  ocrRawText                String?       @map("ocr_raw_text")
+  ocrExtractedDate          DateTime?     @map("ocr_extracted_date")
+  ocrExtractedAmount        Decimal?      @map("ocr_extracted_amount") @db.Decimal(12, 2)
+  ocrExtractedVendor        String?       @map("ocr_extracted_vendor")
+  ocrExtractedDocumentNumber String?      @map("ocr_extracted_document_number")
+  status                    CaptureStatus @default(PENDIENTE)
+  expenseId                 String?       @unique @map("expense_id")
+  expense                   Expense?      @relation(fields: [expenseId], references: [id])
+  classifiedAt              DateTime?     @map("classified_at")
+
+  @@map("expense_captures")
 }
 
 model ExpenseAttachment {

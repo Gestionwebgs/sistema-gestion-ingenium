@@ -1,14 +1,24 @@
 import Image from "next/image";
-import { FolderKanban, LogOut } from "lucide-react";
+import { FolderKanban, Camera, LogOut } from "lucide-react";
 import { signOut } from "@/auth";
 
 type AppShellProps = {
   userName: string;
   userRole: string;
+  activeNav?: "proyectos" | "capturas";
   children: React.ReactNode;
 };
 
-export function AppShell({ userName, userRole, children }: AppShellProps) {
+export function AppShell({
+  userName,
+  userRole,
+  activeNav = "proyectos",
+  children,
+}: AppShellProps) {
+  const navLinkClass = (isActive: boolean) =>
+    `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition ${
+      isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+    }`;
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-60 shrink-0 flex-col bg-brand-navy text-white">
@@ -30,12 +40,13 @@ export function AppShell({ userName, userRole, children }: AppShellProps) {
         </div>
 
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          <a
-            href="/"
-            className="flex items-center gap-3 rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white"
-          >
+          <a href="/" className={navLinkClass(activeNav === "proyectos")}>
             <FolderKanban className="h-4 w-4" strokeWidth={1.75} />
             Proyectos
+          </a>
+          <a href="/capturas" className={navLinkClass(activeNav === "capturas")}>
+            <Camera className="h-4 w-4" strokeWidth={1.75} />
+            Facturas pendientes
           </a>
         </nav>
 

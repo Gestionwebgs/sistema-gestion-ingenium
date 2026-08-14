@@ -4,10 +4,12 @@ Este archivo es el contexto persistente del proyecto para Claude Code. Léelo an
 
 ## Estado del proyecto
 
-Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Autenticación con Auth.js v5 (Credentials contra la tabla `users`, sesión JWT con id/role, login/logout, rutas protegidas vía `src/proxy.ts`) implementada y verificada. Seed (`prisma/seed.ts`, vía `npx prisma db seed`) crea las 5 líneas de negocio y el usuario OWNER real (credenciales en `.env`, no en el código — ver `SEED_OWNER_*`). Siguiente paso: primera pantalla de proyecto.
+Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Autenticación con Auth.js v5 (Credentials contra la tabla `users`, sesión JWT con id/role, login/logout, rutas protegidas vía `src/proxy.ts`) implementada y verificada. Seed (`prisma/seed.ts`, vía `npx prisma db seed`) crea las 5 líneas de negocio y el usuario OWNER real (credenciales en `.env`, no en el código — ver `SEED_OWNER_*`). Identidad visual (logo, colores de marca, íconos Lucide) aplicada. Primera pantalla de proyecto (`/proyectos/nuevo`, `/proyectos/[id]`) funcionando, con cálculo de saldo positivo verificado contra el Excel real del cliente. Captura rápida de facturas con OCR (`/capturas/nueva`, `/capturas`) implementada y verificada.
 
 **Nota Prisma 7:** el cliente requiere un driver adapter explícito (`@prisma/adapter-pg`), ya no basta con `DATABASE_URL` en el datasource — ver `src/lib/prisma.ts`.
-**Nota Next.js 16:** el archivo de middleware se llama `proxy.ts`, no `middleware.ts` (convención renombrada en esta versión).
+**Nota Next.js 16:** el archivo de middleware se llama `proxy.ts`, no `middleware.ts` (convención renombrada en esta versión). Su `matcher` debe excluir extensiones de archivos estáticos (`.png`, etc.) o rompe la optimización de imágenes de Next.
+**Nota tesseract.js:** necesita estar en `serverExternalPackages` (`next.config.ts`) para no romperse con el bundling de Turbopack — intenta hacer un `require` dinámico de su worker que el bundler no resuelve bien.
+**Nota Prisma + dev server:** cuando se agrega un modelo nuevo al schema, además de migrar y regenerar el cliente, hay que **reiniciar el proceso de `npm run dev`** — el singleton de `PrismaClient` en `src/lib/prisma.ts` sobrevive el Fast Refresh y se queda con la versión vieja del cliente en memoria (síntoma: `Cannot read properties of undefined (reading 'findMany')` en un modelo que sí existe en el schema).
 
 ### Entorno local
 
@@ -110,6 +112,11 @@ Al final: total gastos, total abonos, saldo positivo, gastos, ganancia, pendient
 - `incomes` (abonos) — id, project_id → projects (nullable, mismo criterio que expenses), date, description, amount, created_by_user_id, created_at
 - `reimbursements` (pago del reembolso, como movimiento propio; no atado a un solo proyecto porque puede cubrir gastos de varios) — id, date, amount, description, paid_to_user_id → users, created_by_user_id, created_at
 - `reimbursement_items` — reimbursement_id → reimbursements, expense_id → expenses, amount_applied *(une un reembolso con uno o varios gastos personales; soporta reembolsos parciales o agrupados)*
+
+**Captura rápida de facturas (bandeja de fotos pendientes)**
+- `expense_captures` — id, captured_by_user_id → users, file_key (S3, foto/PDF original), file_type, captured_at, ocr_raw_text (texto crudo extraído), ocr_extracted_date / ocr_extracted_amount / ocr_extracted_vendor / ocr_extracted_document_number (nullable, lo que el OCR pudo adivinar), status (`pendiente` | `clasificado`), expense_id → expenses (nullable, se llena al clasificar), classified_at.
+  Flujo: cualquier responsable le toma foto a una factura desde el celular (captura instantánea, sin llenar nada). El sistema sube la foto a S3 y corre OCR en el momento. Después, esa misma persona entra a "Mis facturas pendientes" (filtrado por `captured_by_user_id` = usuario actual) y clasifica cada una: confirma/edita los datos del OCR, elige el proyecto, y marca si fue con dinero personal o de la empresa. Ahí recién se crea el `Expense` real + su `ExpenseAttachment`, y la captura pasa a `clasificado`.
+  **OCR:** `pdf-parse` (Node) para facturas PDF con texto seleccionable; `tesseract.js` (Node, mismo motor Tesseract, sin binario externo) para fotos/escaneos sin texto extraíble. Tesseract solo da texto plano — los campos (RUC, fecha, monto, N° de comprobante) se extraen con reglas/regex sobre ese texto, por lo que el paso de clasificación con datos editables es obligatorio, no opcional.
 
 **Préstamos**
 - `loans` (dinero prestado por terceros para financiar la operación) — id, lender_name (prestamista), borrower_user_id → users (nullable, quién recibe el préstamo — puede ser la empresa en general), amount, currency (`PEN` | `USD`, solo en este módulo), interest_amount, interest_currency (`PEN` | `USD`), loan_date, due_date, status (`pendiente` | `pagado`), notes, created_by_user_id, created_at
