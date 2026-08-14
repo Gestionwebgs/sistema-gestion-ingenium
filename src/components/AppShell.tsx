@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { signOut } from "@/auth";
+import { MobileMenu, type NavItem } from "@/components/MobileMenu";
 
 type AppShellProps = {
   userName: string;
@@ -31,24 +32,62 @@ export function AppShell({
 }: AppShellProps) {
   const isOwner = userRole === "OWNER";
 
+  const iconClass = "h-4 w-4";
+  const navItems: NavItem[] = [
+    {
+      href: "/proyectos",
+      label: "Proyectos",
+      icon: <FolderKanban className={iconClass} strokeWidth={1.75} />,
+      active: activeNav === "proyectos",
+    },
+    {
+      href: "/capturas",
+      label: "Facturas pendientes",
+      icon: <Camera className={iconClass} strokeWidth={1.75} />,
+      active: activeNav === "capturas",
+    },
+    {
+      href: "/prestamos",
+      label: isOwner ? "Préstamos" : "Mis préstamos",
+      icon: <Landmark className={iconClass} strokeWidth={1.75} />,
+      active: activeNav === "prestamos",
+    },
+    ...(isOwner
+      ? ([
+          {
+            href: "/reembolsos",
+            label: "Reembolsos",
+            icon: <HandCoins className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "reembolsos",
+            section: "admin",
+          },
+          {
+            href: "/panel",
+            label: "Panel general",
+            icon: <LayoutDashboard className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "panel",
+            section: "admin",
+          },
+          {
+            href: "/usuarios",
+            label: "Usuarios",
+            icon: <Users className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "usuarios",
+            section: "admin",
+          },
+        ] satisfies NavItem[])
+      : []),
+  ];
+
   const navLinkClass = (isActive: boolean) =>
     `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition ${
       isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
     }`;
 
-  const SignOutButton = ({ className }: { className: string }) => (
-    <form
-      action={async () => {
-        "use server";
-        await signOut({ redirectTo: "/login" });
-      }}
-    >
-      <button type="submit" className={className}>
-        <LogOut className="h-4 w-4" strokeWidth={1.75} />
-        <span className="sr-only md:not-sr-only">Cerrar sesión</span>
-      </button>
-    </form>
-  );
+  async function handleSignOut() {
+    "use server";
+    await signOut({ redirectTo: "/login" });
+  }
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -62,7 +101,12 @@ export function AppShell({
             <p className="text-sm font-bold">Ingenium</p>
           </div>
         </div>
-        <SignOutButton className="flex items-center gap-1 rounded-md p-2 text-white/80 hover:bg-white/10 hover:text-white" />
+        <MobileMenu
+          items={navItems}
+          userName={userName}
+          userRole={userRole}
+          onSignOut={handleSignOut}
+        />
       </header>
 
       {/* Sidebar — solo en desktop */}
@@ -85,42 +129,28 @@ export function AppShell({
         </div>
 
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          <a href="/proyectos" className={navLinkClass(activeNav === "proyectos")}>
-            <FolderKanban className="h-4 w-4" strokeWidth={1.75} />
-            Proyectos
-          </a>
-          <a href="/capturas" className={navLinkClass(activeNav === "capturas")}>
-            <Camera className="h-4 w-4" strokeWidth={1.75} />
-            Facturas pendientes
-          </a>
-          <a href="/prestamos" className={navLinkClass(activeNav === "prestamos")}>
-            <Landmark className="h-4 w-4" strokeWidth={1.75} />
-            {isOwner ? "Préstamos" : "Mis préstamos"}
-          </a>
+          {navItems
+            .filter((i) => i.section !== "admin")
+            .map((item) => (
+              <a key={item.href} href={item.href} className={navLinkClass(item.active)}>
+                {item.icon}
+                {item.label}
+              </a>
+            ))}
 
           {isOwner && (
             <>
               <div className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-white/40">
                 Administración
               </div>
-              <a
-                href="/reembolsos"
-                className={navLinkClass(activeNav === "reembolsos")}
-              >
-                <HandCoins className="h-4 w-4" strokeWidth={1.75} />
-                Reembolsos
-              </a>
-              <a href="/panel" className={navLinkClass(activeNav === "panel")}>
-                <LayoutDashboard className="h-4 w-4" strokeWidth={1.75} />
-                Panel general
-              </a>
-              <a
-                href="/usuarios"
-                className={navLinkClass(activeNav === "usuarios")}
-              >
-                <Users className="h-4 w-4" strokeWidth={1.75} />
-                Usuarios
-              </a>
+              {navItems
+                .filter((i) => i.section === "admin")
+                .map((item) => (
+                  <a key={item.href} href={item.href} className={navLinkClass(item.active)}>
+                    {item.icon}
+                    {item.label}
+                  </a>
+                ))}
             </>
           )}
         </nav>
@@ -132,44 +162,19 @@ export function AppShell({
               {userRole}
             </p>
           </div>
-          <SignOutButton className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-white/80 transition hover:bg-white/10 hover:text-white" />
+          <form action={handleSignOut}>
+            <button
+              type="submit"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+            >
+              <LogOut className="h-4 w-4" strokeWidth={1.75} />
+              Cerrar sesión
+            </button>
+          </form>
         </div>
       </aside>
 
-      <main className="flex-1 bg-background pb-16 md:pb-0">{children}</main>
-
-      {/* Barra inferior — solo en móvil. Solo lo esencial para el trabajo en campo;
-          las pantallas de administración (reembolsos, panel, usuarios) quedan
-          en el sidebar de escritorio. */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-brand-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
-        <a
-          href="/proyectos"
-          className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
-            activeNav === "proyectos" ? "text-brand-blue" : "text-brand-muted"
-          }`}
-        >
-          <FolderKanban className="h-5 w-5" strokeWidth={1.75} />
-          Proyectos
-        </a>
-        <a
-          href="/capturas"
-          className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
-            activeNav === "capturas" ? "text-brand-blue" : "text-brand-muted"
-          }`}
-        >
-          <Camera className="h-5 w-5" strokeWidth={1.75} />
-          Facturas
-        </a>
-        <a
-          href="/prestamos"
-          className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
-            activeNav === "prestamos" ? "text-brand-blue" : "text-brand-muted"
-          }`}
-        >
-          <Landmark className="h-5 w-5" strokeWidth={1.75} />
-          Préstamos
-        </a>
-      </nav>
+      <main className="flex-1 bg-background">{children}</main>
     </div>
   );
 }
