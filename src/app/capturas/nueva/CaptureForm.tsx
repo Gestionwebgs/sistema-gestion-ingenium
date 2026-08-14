@@ -9,6 +9,7 @@ export function CaptureForm() {
     "idle"
   );
   const [savedCount, setSavedCount] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -18,10 +19,16 @@ export function CaptureForm() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      await captureReceiptAction(formData);
-      setSavedCount((c) => c + 1);
-      setStatus("done");
+      const result = await captureReceiptAction(formData);
+      if (result.ok) {
+        setSavedCount((c) => c + 1);
+        setStatus("done");
+      } else {
+        setErrorMessage(result.error);
+        setStatus("error");
+      }
     } catch {
+      setErrorMessage(null);
       setStatus("error");
     }
   }
@@ -46,7 +53,7 @@ export function CaptureForm() {
           )}
           {status === "error" && (
             <p className="text-sm text-red-600">
-              No se pudo guardar la factura. Intenta de nuevo.
+              {errorMessage ?? "No se pudo guardar la factura. Intenta de nuevo."}
             </p>
           )}
 

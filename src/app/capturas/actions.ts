@@ -13,7 +13,9 @@ function extensionFor(contentType: string): string {
   return "jpg";
 }
 
-export async function captureReceiptAction(formData: FormData) {
+export async function captureReceiptAction(
+  formData: FormData
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth();
   if (!session?.user) throw new Error("No autenticado");
 
@@ -25,16 +27,27 @@ export async function captureReceiptAction(formData: FormData) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const contentType = file.type || "image/jpeg";
 
-  const fileKey = await uploadReceiptFile(
-    buffer,
-    contentType,
-    extensionFor(contentType)
-  );
+  let fileKey: string;
+  try {
+    fileKey = await uploadReceiptFile(
+      buffer,
+      contentType,
+      extensionFor(contentType)
+    );
+  } catch (error) {
+    console.error("captureReceiptAction: upload to S3/MinIO failed", error);
+    return {
+      ok: false,
+      error:
+        "No se pudo subir el archivo al almacenamiento. Revisa que el servicio de archivos (S3/MinIO) esté disponible.",
+    };
+  }
 
   let ocr;
   try {
     ocr = await runOcr(buffer, contentType);
-  } catch {
+  } catch (error) {
+    console.error("captureReceiptAction: OCR failed", error);
     ocr = {
       rawText: "",
       extractedDate: null,
@@ -44,18 +57,26 @@ export async function captureReceiptAction(formData: FormData) {
     };
   }
 
-  await prisma.expenseCapture.create({
-    data: {
-      capturedByUserId: session.user.id,
-      fileKey,
-      fileType: contentType,
-      ocrRawText: ocr.rawText || null,
-      ocrExtractedDate: ocr.extractedDate,
-      ocrExtractedAmount: ocr.extractedAmount,
-      ocrExtractedVendor: ocr.extractedVendor,
-      ocrExtractedDocumentNumber: ocr.extractedDocumentNumber,
-    },
-  });
+  try {
+    await prisma.expenseCapture.create({
+      data: {
+        capturedByUserId: session.user.id,
+        fileKey,
+        fileType: contentType,
+        ocrRawText: ocr.rawText || null,
+        ocrExtractedDate: ocr.extractedDate,
+        ocrExtractedAmount: ocr.extractedAmount,
+        ocrExtractedVendor: ocr.extractedVendor,
+        ocrExtractedDocumentNumber: ocr.extractedDocumentNumber,
+      },
+    });
+  } catch (error) {
+    console.error("captureReceiptAction: saving to database failed", error);
+    return {
+      ok: false,
+      error: "El archivo se subió, pero no se pudo guardar en la base de datos.",
+    };
+  }
 
   revalidatePath("/capturas");
   return { ok: true };

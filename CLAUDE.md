@@ -20,6 +20,8 @@ Usuarios, reembolsos, préstamos y panel general (con gráficos de torta/barras 
 
 **OCR probado con una factura electrónica real** (PDF con texto seleccionable): fecha, monto y proveedor se extraen bien. El número de comprobante requirió endurecer el regex a `[A-Z]\d{3}-\d{1,8}` (serie-correlativo peruano estándar) porque el patrón laxo anterior confundía fragmentos de la dirección (ej. "TDA. B1-8") con el número real. Con capturas de pantalla de apps de pago (Yape/Plin, sin RUC ni layout de factura) el monto se sigue extrayendo razonablemente bien, pero la fecha en texto ("14 agosto 2026") no matchea el regex de fecha numérica — se espera que el usuario la complete a mano en la pantalla de clasificación, que ya es siempre editable.
 
+**Nota S3/MinIO — bucket:** `src/lib/s3.ts` crea el bucket solo si no existe (`ensureBucket`, se corre una vez por proceso antes de la primera subida). Esto se agregó porque el despliegue en la segunda máquina del usuario falló silenciosamente ("No se pudo guardar la factura") — nunca documenté un paso para crear el bucket ahí, solo lo había creado a mano en esta máquina con un script suelto que no quedó en ningún lado. Ya no hace falta ese paso manual en ningún entorno nuevo (dev local, la otra máquina, o el futuro S3 real).
+
 ## Backlog (anotado, no construir todavía)
 
 **Visión del producto:** el usuario piensa esta plataforma como una intranet de la empresa, no solo como gestión de proyectos/gastos — va a seguir creciendo con más módulos. Tener esto en cuenta en decisiones de arquitectura (no diseñar como si el alcance fuera fijo).
