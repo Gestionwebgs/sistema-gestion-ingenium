@@ -8,7 +8,8 @@ import {
   LayoutDashboard,
   Users,
 } from "lucide-react";
-import { signOut } from "@/auth";
+import { auth, signOut } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { MobileMenu, type NavItem } from "@/components/MobileMenu";
 
 type AppShellProps = {
@@ -24,13 +25,20 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
-export function AppShell({
+export async function AppShell({
   userName,
   userRole,
   activeNav = "proyectos",
   children,
 }: AppShellProps) {
   const isOwner = userRole === "OWNER";
+
+  const session = await auth();
+  const pendingCapturesCount = session?.user.id
+    ? await prisma.expenseCapture.count({
+        where: { capturedByUserId: session.user.id, status: "PENDIENTE" },
+      })
+    : 0;
 
   const iconClass = "h-4 w-4";
   const navItems: NavItem[] = [
@@ -55,6 +63,7 @@ export function AppShell({
       label: "Facturas pendientes",
       icon: <Camera className={iconClass} strokeWidth={1.75} />,
       active: activeNav === "capturas",
+      badge: pendingCapturesCount,
     },
     {
       href: "/prestamos",
@@ -136,6 +145,11 @@ export function AppShell({
               <a key={item.href} href={item.href} className={navLinkClass(item.active)}>
                 {item.icon}
                 {item.label}
+                {!!item.badge && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                    {item.badge}
+                  </span>
+                )}
               </a>
             ))}
 

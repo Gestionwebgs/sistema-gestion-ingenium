@@ -9,6 +9,7 @@ export type NavItem = {
   icon: ReactNode;
   active: boolean;
   section?: "admin";
+  badge?: number;
 };
 
 export function MobileMenu({
@@ -76,6 +77,11 @@ export function MobileMenu({
                 >
                   {item.icon}
                   {item.label}
+                  {!!item.badge && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                      {item.badge}
+                    </span>
+                  )}
                 </a>
               ))}
 

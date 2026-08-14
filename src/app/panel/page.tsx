@@ -31,26 +31,33 @@ export default async function PanelPage() {
   const session = await auth();
   if (session?.user.role !== "OWNER") redirect("/proyectos");
 
-  const [projects, generalExpenses, generalIncomes, personalExpenses, loans] =
-    await Promise.all([
-      prisma.project.findMany({
-        include: { expenses: true, businessLine: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.expense.aggregate({
-        where: { projectId: null },
-        _sum: { amount: true },
-      }),
-      prisma.income.aggregate({
-        where: { projectId: null },
-        _sum: { amount: true },
-      }),
-      prisma.expense.findMany({
-        where: { paymentSource: "PERSONAL", paidByUserId: { not: null } },
-        include: { reimbursementItems: true },
-      }),
-      prisma.loan.findMany({ where: { status: "PENDIENTE" } }),
-    ]);
+  const [
+    projects,
+    generalExpenses,
+    generalIncomes,
+    personalExpenses,
+    loans,
+    pendingCapturesCount,
+  ] = await Promise.all([
+    prisma.project.findMany({
+      include: { expenses: true, businessLine: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.expense.aggregate({
+      where: { projectId: null },
+      _sum: { amount: true },
+    }),
+    prisma.income.aggregate({
+      where: { projectId: null },
+      _sum: { amount: true },
+    }),
+    prisma.expense.findMany({
+      where: { paymentSource: "PERSONAL", paidByUserId: { not: null } },
+      include: { reimbursementItems: true },
+    }),
+    prisma.loan.findMany({ where: { status: "PENDIENTE" } }),
+    prisma.expenseCapture.count({ where: { status: "PENDIENTE" } }),
+  ]);
 
   const projectStats = projects.map((p) => ({
     id: p.id,
@@ -134,6 +141,11 @@ export default async function PanelPage() {
                     .join(" + ")
             }
             warn={loans.length > 0}
+          />
+          <StatCard
+            label="Facturas sin confirmar"
+            value={`${pendingCapturesCount}`}
+            warn={pendingCapturesCount > 0}
           />
         </div>
 
