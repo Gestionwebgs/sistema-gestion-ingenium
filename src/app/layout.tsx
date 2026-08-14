@@ -15,9 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Ingenium Service SAC — Gestión de Proyectos",
   description: "Sistema de gestión de proyectos y control financiero de Ingenium Service SAC.",
-  icons: {
-    icon: "/logo.png",
-  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
