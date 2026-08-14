@@ -85,7 +85,7 @@ export function AppShell({
         </div>
 
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          <a href="/" className={navLinkClass(activeNav === "proyectos")}>
+          <a href="/proyectos" className={navLinkClass(activeNav === "proyectos")}>
             <FolderKanban className="h-4 w-4" strokeWidth={1.75} />
             Proyectos
           </a>
@@ -143,7 +143,7 @@ export function AppShell({
           en el sidebar de escritorio. */}
       <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-brand-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
         <a
-          href="/"
+          href="/proyectos"
           className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
             activeNav === "proyectos" ? "text-brand-blue" : "text-brand-muted"
           }`}

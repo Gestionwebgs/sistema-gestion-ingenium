@@ -207,7 +207,7 @@ export default async function NuevoProyectoPage() {
 
           <div className="flex justify-end gap-3">
             <a
-              href="/"
+              href="/proyectos"
               className="rounded-md border border-brand-border px-4 py-2 text-sm font-medium text-brand-navy transition hover:bg-gray-50"
             >
               Cancelar

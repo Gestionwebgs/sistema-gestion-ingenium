@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { GastosPorProyectoChart, GananciaPorProyectoChart } from "./PanelCharts";
 
 const formatSoles = (value: number) =>
   value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -28,7 +29,7 @@ function computeProjectGanancia(project: {
 
 export default async function PanelPage() {
   const session = await auth();
-  if (session?.user.role !== "OWNER") redirect("/");
+  if (session?.user.role !== "OWNER") redirect("/proyectos");
 
   const [projects, generalExpenses, generalIncomes, personalExpenses, loans] =
     await Promise.all([
@@ -136,8 +137,37 @@ export default async function PanelPage() {
           />
         </div>
 
+        <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="rounded-lg border border-brand-border bg-brand-surface p-4">
+            <h2 className="mb-2 text-sm font-semibold text-brand-navy">
+              Gastos por proyecto
+            </h2>
+            <GastosPorProyectoChart
+              data={[
+                ...projectStats
+                  .filter((p) => p.totalGastos > 0)
+                  .map((p) => ({ name: p.name, value: p.totalGastos })),
+                ...(totalGastosGenerales > 0
+                  ? [{ name: "Generales", value: totalGastosGenerales }]
+                  : []),
+              ]}
+            />
+          </div>
+          <div className="rounded-lg border border-brand-border bg-brand-surface p-4">
+            <h2 className="mb-2 text-sm font-semibold text-brand-navy">
+              Ganancia por proyecto
+            </h2>
+            <GananciaPorProyectoChart
+              data={projectStats.map((p) => ({
+                name: p.name,
+                ganancia: p.ganancia,
+              }))}
+            />
+          </div>
+        </div>
+
         <h2 className="mb-3 text-sm font-semibold text-brand-navy">
-          Ganancia por proyecto
+          Detalle por proyecto
         </h2>
         <div className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface">
           {projectStats.map((p) => (

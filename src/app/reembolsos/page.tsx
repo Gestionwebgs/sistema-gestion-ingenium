@@ -12,7 +12,7 @@ const formatDate = (date: Date) =>
 
 export default async function ReembolsosPage() {
   const session = await auth();
-  if (session?.user.role !== "OWNER") redirect("/");
+  if (session?.user.role !== "OWNER") redirect("/proyectos");
 
   const personalExpenses = await prisma.expense.findMany({
     where: { paymentSource: "PERSONAL", paidByUserId: { not: null } },

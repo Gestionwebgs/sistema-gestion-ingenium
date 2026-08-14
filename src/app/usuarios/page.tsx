@@ -6,7 +6,7 @@ import { Plus, UserRound } from "lucide-react";
 
 export default async function UsuariosPage() {
   const session = await auth();
-  if (session?.user.role !== "OWNER") redirect("/");
+  if (session?.user.role !== "OWNER") redirect("/proyectos");
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "asc" },

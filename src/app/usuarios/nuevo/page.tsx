@@ -5,7 +5,7 @@ import { createUserAction } from "../actions";
 
 export default async function NuevoUsuarioPage() {
   const session = await auth();
-  if (session?.user.role !== "OWNER") redirect("/");
+  if (session?.user.role !== "OWNER") redirect("/proyectos");
 
   return (
     <AppShell

@@ -24,7 +24,10 @@ export default async function ProyectoDetailPage({
       client: true,
       clientContact: true,
       businessLine: true,
-      expenses: { orderBy: { date: "asc" } },
+      expenses: {
+        orderBy: { date: "asc" },
+        include: { createdByUser: { select: { name: true } } },
+      },
       incomes: { orderBy: { date: "asc" } },
     },
   });
@@ -61,7 +64,7 @@ export default async function ProyectoDetailPage({
       <div className="p-4 sm:p-8">
         <header className="mb-6">
           <a
-            href="/"
+            href="/proyectos"
             className="text-sm text-brand-blue hover:underline"
           >
             ← Proyectos
@@ -143,9 +146,12 @@ export default async function ProyectoDetailPage({
                       </td>
                       <td className="px-3 py-2 text-brand-navy">
                         {expense.description}
-                        <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
+                        <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium uppercase text-brand-blue">
+                          {expense.createdByUser.name}
+                        </span>
+                        <span className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
                           {expense.paymentSource === "PERSONAL"
-                            ? expense.paidByName || "Personal"
+                            ? "Personal"
                             : "Empresa"}
                         </span>
                       </td>
