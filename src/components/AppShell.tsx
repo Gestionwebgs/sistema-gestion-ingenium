@@ -7,6 +7,8 @@ import {
   LayoutDashboard,
   Users,
   Receipt,
+  ListChecks,
+  Contact,
 } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -20,6 +22,8 @@ type AppShellProps = {
     | "capturas"
     | "prestamos"
     | "gastos"
+    | "pendientes"
+    | "contactos"
     | "panel"
     | "usuarios";
   children: React.ReactNode;
@@ -74,10 +78,27 @@ export async function AppShell({
     ...(isOwner
       ? ([
           {
+            href: "/pendientes",
+            label: "Pendientes",
+            icon: <ListChecks className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "pendientes",
+          },
+        ] satisfies NavItem[])
+      : []),
+    ...(isOwner
+      ? ([
+          {
             href: "/gastos",
             label: "Gastos por mes",
             icon: <Receipt className={iconClass} strokeWidth={1.75} />,
             active: activeNav === "gastos",
+            section: "admin",
+          },
+          {
+            href: "/contactos",
+            label: "Contactos",
+            icon: <Contact className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "contactos",
             section: "admin",
           },
           {

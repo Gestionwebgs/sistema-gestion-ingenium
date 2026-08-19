@@ -44,6 +44,23 @@ enum CaptureStatus {
   DESCARTADA
 }
 
+enum PendingTaskSection {
+  PROYECTOS
+  GESTION_INTERNA
+}
+
+enum PendingTaskImportance {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+enum PendingTaskStatus {
+  PENDIENTE
+  EN_CURSO
+  CERRADO
+}
+
 // El "medio pago" que imprime el proveedor en la factura no es confiable
 // (ej. factura dice EFECTIVO pero el pago real fue por Yape/Plin) — este es
 // el medio real que la persona usó, elegido a mano, no leído por OCR.
@@ -111,8 +128,55 @@ model User {
   createdLoans          Loan[]                 @relation("LoanCreatedBy")
   expenseCaptures       ExpenseCapture[]
   discardedCaptures     ExpenseCapture[]       @relation("ExpenseCaptureDiscardedBy")
+  responsiblePendingTasks PendingTask[]        @relation("PendingTaskResponsible")
+  createdPendingTasks     PendingTask[]        @relation("PendingTaskCreatedBy")
 
   @@map("users")
+}
+
+// Lista de pendientes de la empresa (tareas + seguimiento), replica de la
+// hoja de control que ya llevaban en Excel. "PROYECTOS" agrupa por
+// proyecto/cliente (ej. "PAMOLSA", "QROMA - ÑAÑA"); "GESTION_INTERNA" agrupa
+// por área interna (ej. "GESTION DE FINANZAS"). groupName es texto libre a
+// propósito: no siempre corresponde 1:1 con un Project de este sistema.
+model PendingTask {
+  id                String                 @id @default(cuid())
+  section           PendingTaskSection
+  groupName         String                 @map("group_name")
+  sortOrder         Int                    @default(0) @map("sort_order")
+  task              String
+  contactName       String?                @map("contact_name")
+  importance        PendingTaskImportance?
+  responsibleUserId String?                @map("responsible_user_id")
+  responsibleUser   User?                  @relation("PendingTaskResponsible", fields: [responsibleUserId], references: [id])
+  responsibleName   String?                @map("responsible_name")
+  status            PendingTaskStatus      @default(PENDIENTE)
+  raisedDate        DateTime?              @map("raised_date")
+  dueDate           DateTime?              @map("due_date")
+  notes             String?
+  createdByUserId   String                 @map("created_by_user_id")
+  createdByUser     User                   @relation("PendingTaskCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  @@map("pending_tasks")
+}
+
+// Directorio de contactos externos por cliente/servicio — distinto de
+// ClientContact (que está atado a un Client formal del sistema). Aquí la
+// empresa es texto libre porque incluye clientes sin proyecto formal aún,
+// proveedores y hasta empresas del mismo grupo (ej. Ingenium A&R SAC).
+model ClientDirectoryContact {
+  id              String   @id @default(cuid())
+  name            String
+  companyName     String   @map("company_name")
+  projectOrSite   String?  @map("project_or_site")
+  serviceInCharge String?  @map("service_in_charge")
+  phone           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("client_directory_contacts")
 }
 
 model Project {
