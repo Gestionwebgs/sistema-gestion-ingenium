@@ -24,13 +24,21 @@ export default async function ProyectosPage() {
               Cada proyecto tiene su propia pestaña de control.
             </p>
           </div>
-          <a
-            href="/proyectos/nuevo"
-            className="flex items-center justify-center gap-2 rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2} />
-            Nuevo proyecto
-          </a>
+          <div className="flex gap-2">
+            <a
+              href="/proyectos/importar"
+              className="flex items-center justify-center gap-2 rounded-md border border-brand-border px-4 py-2 text-sm font-medium text-brand-navy transition hover:bg-gray-50"
+            >
+              Importar desde Excel
+            </a>
+            <a
+              href="/proyectos/nuevo"
+              className="flex items-center justify-center gap-2 rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Nuevo proyecto
+            </a>
+          </div>
         </header>
 
         {projects.length === 0 ? (
