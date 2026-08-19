@@ -6,6 +6,7 @@ import {
   Landmark,
   LayoutDashboard,
   Users,
+  Receipt,
 } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +19,7 @@ type AppShellProps = {
     | "proyectos"
     | "capturas"
     | "prestamos"
+    | "gastos"
     | "panel"
     | "usuarios";
   children: React.ReactNode;
@@ -71,6 +73,13 @@ export async function AppShell({
     },
     ...(isOwner
       ? ([
+          {
+            href: "/gastos",
+            label: "Gastos por mes",
+            icon: <Receipt className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "gastos",
+            section: "admin",
+          },
           {
             href: "/usuarios",
             label: "Usuarios",

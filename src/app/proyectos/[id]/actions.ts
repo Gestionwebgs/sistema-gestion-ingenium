@@ -10,6 +10,7 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
 
   const date = new Date(String(formData.get("date") ?? ""));
   const description = String(formData.get("description") ?? "").trim();
+  const operationCode = String(formData.get("operationCode") ?? "").trim() || null;
   const amount = Number(formData.get("amount") ?? 0) || 0;
   const paymentSource = String(formData.get("paymentSource") ?? "EMPRESA") as
     | "PERSONAL"
@@ -43,6 +44,7 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
       projectId,
       date,
       description,
+      operationCode,
       amount,
       paymentSource,
       paymentMethod,

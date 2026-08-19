@@ -168,6 +168,11 @@ export default async function ProyectoDetailPage({
                       </td>
                       <td className="px-3 py-2 text-brand-navy">
                         {expense.description}
+                        {expense.operationCode && (
+                          <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-brand-muted">
+                            {expense.operationCode}
+                          </span>
+                        )}
                         <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium uppercase text-brand-blue">
                           {expense.paidByName ?? expense.paidByUser?.name ?? expense.createdByUser.name}
                         </span>
@@ -215,6 +220,13 @@ export default async function ProyectoDetailPage({
                   placeholder="Descripción"
                   required
                   className="min-w-[8rem] flex-1 rounded border border-brand-border px-2 py-1.5 text-xs"
+                />
+                <input
+                  type="text"
+                  name="operationCode"
+                  placeholder="N° comprobante"
+                  title="N° de comprobante/factura, para ubicarlo en el reporte mensual"
+                  className="w-[8rem] shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <select
                   name="paidByUserId"
