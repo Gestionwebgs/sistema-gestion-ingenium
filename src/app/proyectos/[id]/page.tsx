@@ -76,20 +76,28 @@ export default async function ProyectoDetailPage({
       userRole={session!.user.role}
     >
       <div className="p-4 sm:p-8">
-        <header className="mb-6">
+        <header className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <a
+              href="/proyectos"
+              className="text-sm text-brand-blue hover:underline"
+            >
+              ← Proyectos
+            </a>
+            <h1 className="mt-1 text-xl font-bold text-brand-navy">
+              {project.name}
+            </h1>
+            <p className="text-sm text-brand-muted">
+              {project.businessLine.name}
+              {project.location ? ` · ${project.location}` : ""}
+            </p>
+          </div>
           <a
-            href="/proyectos"
-            className="text-sm text-brand-blue hover:underline"
+            href={`/proyectos/${project.id}/editar`}
+            className="shrink-0 rounded-md border border-brand-border px-3 py-1.5 text-sm font-medium text-brand-navy transition hover:bg-gray-50"
           >
-            ← Proyectos
+            Editar
           </a>
-          <h1 className="mt-1 text-xl font-bold text-brand-navy">
-            {project.name}
-          </h1>
-          <p className="text-sm text-brand-muted">
-            {project.businessLine.name}
-            {project.location ? ` · ${project.location}` : ""}
-          </p>
         </header>
 
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

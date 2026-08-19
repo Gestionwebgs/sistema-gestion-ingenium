@@ -7,8 +7,12 @@ const IGV_RATE = 0.18;
 const formatSoles = (value: number) =>
   value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function OrderAmountFields() {
-  const [amount, setAmount] = useState(0);
+export function OrderAmountFields({
+  initialAmount = 0,
+}: {
+  initialAmount?: number;
+}) {
+  const [amount, setAmount] = useState(initialAmount);
   const igv = Math.round(amount * IGV_RATE * 100) / 100;
   const total = amount + igv;
 
