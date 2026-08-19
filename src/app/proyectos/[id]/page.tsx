@@ -169,7 +169,7 @@ export default async function ProyectoDetailPage({
                       <td className="px-3 py-2 text-brand-navy">
                         {expense.description}
                         <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium uppercase text-brand-blue">
-                          {expense.paidByUser?.name ?? expense.createdByUser.name}
+                          {expense.paidByName ?? expense.paidByUser?.name ?? expense.createdByUser.name}
                         </span>
                         <span className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
                           {expense.paymentSource === "PERSONAL"
@@ -228,6 +228,13 @@ export default async function ProyectoDetailPage({
                     </option>
                   ))}
                 </select>
+                <input
+                  type="text"
+                  name="paidByNameManual"
+                  placeholder="Otro (nombre, si no está en la lista)"
+                  title="Si la persona no tiene cuenta en el sistema, escribe su nombre aquí en vez de elegirlo arriba"
+                  className="min-w-[10rem] shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
+                />
                 <select
                   name="paymentSource"
                   className="shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"

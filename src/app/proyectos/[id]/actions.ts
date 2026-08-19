@@ -18,14 +18,25 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
   const paymentMethod = paymentMethodRaw
     ? (paymentMethodRaw as "EFECTIVO" | "YAPE_PLIN" | "TRANSFERENCIA" | "TARJETA" | "OTRO")
     : null;
-  const paidByUserId =
-    String(formData.get("paidByUserId") ?? "").trim() || session.user.id;
+  const paidByNameManual = String(formData.get("paidByNameManual") ?? "").trim();
+  const paidByUserIdRaw = String(formData.get("paidByUserId") ?? "").trim();
 
   if (!description || amount <= 0) return;
 
-  const paidByUser = await prisma.user.findUniqueOrThrow({
-    where: { id: paidByUserId },
-  });
+  // Quién hizo la compra — sin importar la fuente de pago (empresa o
+  // personal), para saber siempre a quién atribuirla. Si no tiene cuenta en
+  // el sistema (ej. un capataz de obra), se registra solo el nombre.
+  let paidByUserId: string | null = null;
+  let paidByName: string;
+  if (paidByNameManual) {
+    paidByName = paidByNameManual;
+  } else {
+    const paidByUser = await prisma.user.findUniqueOrThrow({
+      where: { id: paidByUserIdRaw || session.user.id },
+    });
+    paidByUserId = paidByUser.id;
+    paidByName = paidByUser.name;
+  }
 
   await prisma.expense.create({
     data: {
@@ -35,10 +46,8 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
       amount,
       paymentSource,
       paymentMethod,
-      // Quién hizo la compra — sin importar la fuente de pago (empresa o
-      // personal), para saber siempre a quién atribuirla.
-      paidByUserId: paidByUser.id,
-      paidByName: paidByUser.name,
+      paidByUserId,
+      paidByName,
       createdByUserId: session.user.id,
     },
   });

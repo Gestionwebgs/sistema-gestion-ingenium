@@ -131,6 +131,13 @@ export default async function CapturasPendientesPage() {
                       </option>
                     ))}
                   </select>
+                  <input
+                    type="text"
+                    name="paidByNameManual"
+                    placeholder="Otro (nombre, si no está en la lista)"
+                    title="Si la persona no tiene cuenta en el sistema, escribe su nombre aquí en vez de elegirlo arriba"
+                    className="rounded border border-brand-border px-2 py-1.5 text-sm"
+                  />
                   <select
                     name="paymentSource"
                     defaultValue="EMPRESA"

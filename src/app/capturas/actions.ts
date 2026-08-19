@@ -109,16 +109,24 @@ export async function classifyCaptureAction(
     : null;
   const operationCode =
     String(formData.get("operationCode") ?? "").trim() || null;
-  const paidByUserId =
-    String(formData.get("paidByUserId") ?? "").trim() || session.user.id;
+  const paidByNameManual = String(formData.get("paidByNameManual") ?? "").trim();
+  const paidByUserIdRaw = String(formData.get("paidByUserId") ?? "").trim();
 
   if (!description || amount <= 0) {
     throw new Error("Descripción y monto son requeridos");
   }
 
-  const paidByUser = await prisma.user.findUniqueOrThrow({
-    where: { id: paidByUserId },
-  });
+  let paidByUserId: string | null = null;
+  let paidByName: string;
+  if (paidByNameManual) {
+    paidByName = paidByNameManual;
+  } else {
+    const paidByUser = await prisma.user.findUniqueOrThrow({
+      where: { id: paidByUserIdRaw || session.user.id },
+    });
+    paidByUserId = paidByUser.id;
+    paidByName = paidByUser.name;
+  }
 
   const expense = await prisma.expense.create({
     data: {
@@ -129,8 +137,8 @@ export async function classifyCaptureAction(
       paymentSource,
       paymentMethod,
       operationCode,
-      paidByUserId: paidByUser.id,
-      paidByName: paidByUser.name,
+      paidByUserId,
+      paidByName,
       createdByUserId: session.user.id,
       attachments: {
         create: {
