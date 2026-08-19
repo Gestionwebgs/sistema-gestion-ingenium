@@ -104,6 +104,7 @@ export default async function GastosPage() {
                       <th className="px-3 py-2">Descripción</th>
                       <th className="px-3 py-2">Proyecto</th>
                       <th className="px-3 py-2 text-right">Monto</th>
+                      <th className="px-3 py-2" />
                     </tr>
                   </thead>
                   <tbody>
@@ -123,6 +124,14 @@ export default async function GastosPage() {
                         </td>
                         <td className="px-3 py-2 text-right text-brand-navy">
                           S/. {formatSoles(Number(expense.amount))}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <a
+                            href={`/gastos/${expense.id}/editar`}
+                            className="text-xs text-brand-blue hover:underline"
+                          >
+                            Editar
+                          </a>
                         </td>
                       </tr>
                     ))}
