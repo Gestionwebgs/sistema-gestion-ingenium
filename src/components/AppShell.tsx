@@ -21,6 +21,7 @@ type AppShellProps = {
     | "proyectos"
     | "capturas"
     | "prestamos"
+    | "prestamos-terceros"
     | "gastos"
     | "pendientes"
     | "contactos"
@@ -69,11 +70,21 @@ export async function AppShell({
       active: activeNav === "capturas",
       badge: pendingCapturesCount,
     },
+    ...(isOwner
+      ? ([
+          {
+            href: "/prestamos",
+            label: "Préstamos",
+            icon: <Landmark className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "prestamos",
+          },
+        ] satisfies NavItem[])
+      : []),
     {
-      href: "/prestamos",
-      label: isOwner ? "Préstamos" : "Mis préstamos",
+      href: "/prestamos-terceros",
+      label: isOwner ? "Préstamos de terceros" : "Mis préstamos",
       icon: <Landmark className={iconClass} strokeWidth={1.75} />,
-      active: activeNav === "prestamos",
+      active: activeNav === "prestamos-terceros",
     },
     ...(isOwner
       ? ([

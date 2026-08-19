@@ -126,6 +126,7 @@ model User {
   createdReimbursements Reimbursement[]        @relation("ReimbursementCreatedBy")
   loansReceived         Loan[]                 @relation("LoanBorrower")
   createdLoans          Loan[]                 @relation("LoanCreatedBy")
+  createdLoanPayments   LoanPayment[]          @relation("LoanPaymentCreatedBy")
   expenseCaptures       ExpenseCapture[]
   discardedCaptures     ExpenseCapture[]       @relation("ExpenseCaptureDiscardedBy")
   responsiblePendingTasks PendingTask[]        @relation("PendingTaskResponsible")
@@ -381,5 +382,27 @@ model Loan {
   createdByUser    User          @relation("LoanCreatedBy", fields: [createdByUserId], references: [id])
   createdAt        DateTime      @default(now()) @map("created_at")
 
+  payments LoanPayment[]
+
   @@map("loans")
+}
+
+// Abonos parciales a un préstamo de terceros. El saldo pendiente del
+// préstamo se calcula restando los abonos en la misma moneda que el
+// principal (loan.currency) — un abono en otra moneda queda registrado
+// igual, pero no se compensa automáticamente contra el principal (no hay
+// conversión de tipo de cambio en el sistema).
+model LoanPayment {
+  id              String       @id @default(cuid())
+  loanId          String       @map("loan_id")
+  loan            Loan         @relation(fields: [loanId], references: [id])
+  date            DateTime
+  amount          Decimal      @db.Decimal(12, 2)
+  currency        LoanCurrency @default(PEN)
+  notes           String?
+  createdByUserId String       @map("created_by_user_id")
+  createdByUser   User         @relation("LoanPaymentCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  @@map("loan_payments")
 }
