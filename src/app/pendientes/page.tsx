@@ -73,13 +73,21 @@ export default async function PendientesPage() {
               estado para avanzarlo.
             </p>
           </div>
-          <a
-            href="/pendientes/nuevo"
-            className="flex items-center justify-center gap-2 rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2} />
-            Nuevo pendiente
-          </a>
+          <div className="flex gap-2">
+            <a
+              href="/pendientes/importar"
+              className="flex items-center justify-center gap-2 rounded-md border border-brand-border px-4 py-2 text-sm font-medium text-brand-navy transition hover:bg-gray-50"
+            >
+              Importar desde Excel
+            </a>
+            <a
+              href="/pendientes/nuevo"
+              className="flex items-center justify-center gap-2 rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Nuevo pendiente
+            </a>
+          </div>
         </header>
 
         <TaskSection title="Pendientes de proyectos" groups={proyectosGroups} />
