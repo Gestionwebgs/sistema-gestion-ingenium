@@ -15,12 +15,12 @@ type PendingExpense = {
 };
 
 export function PendingExpensesGroup({
-  userId,
-  userName,
+  paidToUserId,
+  paidToName,
   expenses,
 }: {
-  userId: string;
-  userName: string;
+  paidToUserId: string | null;
+  paidToName: string;
   expenses: PendingExpense[];
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -40,10 +40,13 @@ export function PendingExpensesGroup({
 
   return (
     <div className="rounded-lg border border-brand-border bg-brand-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold text-brand-navy">{userName}</h3>
+      <h3 className="mb-3 text-sm font-semibold text-brand-navy">{paidToName}</h3>
 
       <form action={createReimbursementAction} className="space-y-3">
-        <input type="hidden" name="paidToUserId" value={userId} />
+        {paidToUserId && (
+          <input type="hidden" name="paidToUserId" value={paidToUserId} />
+        )}
+        <input type="hidden" name="paidToName" value={paidToName} />
 
         <div className="divide-y divide-brand-border rounded-md border border-brand-border">
           {expenses.map((expense) => (
@@ -102,7 +105,7 @@ export function PendingExpensesGroup({
               disabled={checked.size === 0}
               className="rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy disabled:opacity-40"
             >
-              Registrar reembolso
+              Registrar pago
             </button>
           </div>
         </div>

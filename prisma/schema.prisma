@@ -270,8 +270,9 @@ model Reimbursement {
   date            DateTime
   amount          Decimal  @db.Decimal(12, 2)
   description     String?
-  paidToUserId    String   @map("paid_to_user_id")
-  paidToUser      User     @relation("ReimbursementPaidTo", fields: [paidToUserId], references: [id])
+  paidToUserId    String?  @map("paid_to_user_id")
+  paidToUser      User?    @relation("ReimbursementPaidTo", fields: [paidToUserId], references: [id])
+  paidToName      String   @map("paid_to_name")
   createdByUserId String   @map("created_by_user_id")
   createdByUser   User     @relation("ReimbursementCreatedBy", fields: [createdByUserId], references: [id])
   createdAt       DateTime @default(now()) @map("created_at")
@@ -304,6 +305,10 @@ model Loan {
   currency         LoanCurrency  @default(PEN)
   interestAmount   Decimal?      @map("interest_amount") @db.Decimal(12, 2)
   interestCurrency LoanCurrency? @map("interest_currency")
+  // Comisión que cobra el banco por la operación (aparte del interés) — ej. la
+  // "+ comisión del banco 4.80" que aparece en la hoja de control de préstamos.
+  bankCommission         Decimal?      @map("bank_commission") @db.Decimal(12, 2)
+  bankCommissionCurrency LoanCurrency? @map("bank_commission_currency")
   loanDate         DateTime      @map("loan_date")
   dueDate          DateTime?     @map("due_date")
   status           LoanStatus    @default(PENDIENTE)

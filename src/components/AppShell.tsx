@@ -4,7 +4,6 @@ import {
   Camera,
   LogOut,
   Landmark,
-  HandCoins,
   LayoutDashboard,
   Users,
 } from "lucide-react";
@@ -19,7 +18,6 @@ type AppShellProps = {
     | "proyectos"
     | "capturas"
     | "prestamos"
-    | "reembolsos"
     | "panel"
     | "usuarios";
   children: React.ReactNode;
@@ -73,13 +71,6 @@ export async function AppShell({
     },
     ...(isOwner
       ? ([
-          {
-            href: "/reembolsos",
-            label: "Reembolsos",
-            icon: <HandCoins className={iconClass} strokeWidth={1.75} />,
-            active: activeNav === "reembolsos",
-            section: "admin",
-          },
           {
             href: "/usuarios",
             label: "Usuarios",

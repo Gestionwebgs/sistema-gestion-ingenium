@@ -171,6 +171,42 @@ export default async function NuevoPrestamoPage() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="bankCommission"
+                className="mb-1 block text-sm font-medium text-brand-navy"
+              >
+                Comisión del banco
+              </label>
+              <input
+                id="bankCommission"
+                name="bankCommission"
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-full rounded-md border border-brand-border px-3 py-2 text-sm text-brand-navy focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="bankCommissionCurrency"
+                className="mb-1 block text-sm font-medium text-brand-navy"
+              >
+                Moneda de la comisión
+              </label>
+              <select
+                id="bankCommissionCurrency"
+                name="bankCommissionCurrency"
+                defaultValue="PEN"
+                className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
+              >
+                <option value="PEN">Soles (S/.)</option>
+                <option value="USD">Dólares ($)</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label
               htmlFor="notes"
