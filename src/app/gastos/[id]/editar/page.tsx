@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { getFileSignedUrl } from "@/lib/s3";
 import { updateExpenseAction } from "../../actions";
 
 function toDateInputValue(date: Date): string {
@@ -18,11 +19,21 @@ export default async function EditarGastoPage({
   if (session?.user.role !== "OWNER") redirect("/");
 
   const [expense, projects, users] = await Promise.all([
-    prisma.expense.findUnique({ where: { id } }),
+    prisma.expense.findUnique({
+      where: { id },
+      include: { attachments: { orderBy: { uploadedAt: "asc" } } },
+    }),
     prisma.project.findMany({ orderBy: { name: "asc" } }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);
   if (!expense) notFound();
+
+  const attachmentLinks = await Promise.all(
+    expense.attachments.map(async (attachment) => ({
+      id: attachment.id,
+      url: await getFileSignedUrl(attachment.fileKey),
+    }))
+  );
 
   const backHref = expense.projectId
     ? `/proyectos/${expense.projectId}`
@@ -221,6 +232,40 @@ export default async function EditarGastoPage({
                 className="w-full rounded-md border border-brand-border px-3 py-2 text-sm text-brand-navy focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-brand-navy">
+              Comprobante (foto o PDF)
+            </label>
+            {attachmentLinks.length > 0 && (
+              <ul className="mb-2 space-y-1">
+                {attachmentLinks.map((attachment, i) => (
+                  <li key={attachment.id}>
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-brand-blue hover:underline"
+                    >
+                      Ver comprobante {attachmentLinks.length > 1 ? i + 1 : ""}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <input
+              id="file"
+              name="file"
+              type="file"
+              accept="image/*,.pdf"
+              className="w-full rounded-md border border-brand-border px-3 py-2 text-sm text-brand-navy focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
+            />
+            <p className="mt-1 text-xs text-brand-muted">
+              {attachmentLinks.length > 0
+                ? "Si subes un archivo, se agrega como comprobante adicional (no reemplaza el existente)."
+                : "Opcional."}
+            </p>
           </div>
 
           <div>

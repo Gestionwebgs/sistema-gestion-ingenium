@@ -91,6 +91,8 @@ export default async function PanelPage() {
     return acc;
   }, {});
 
+  const currentPeriodo = new Date().toISOString().slice(0, 7);
+
   return (
     <AppShell
       userName={session.user.name ?? ""}
@@ -176,6 +178,36 @@ export default async function PanelPage() {
               }))}
             />
           </div>
+        </div>
+
+        <div className="mb-8 rounded-lg border border-brand-border bg-brand-surface p-4">
+          <h2 className="mb-1 text-sm font-semibold text-brand-navy">
+            Comprobantes para contabilidad
+          </h2>
+          <p className="mb-3 text-sm text-brand-muted">
+            Descarga en un .zip todas las facturas/boletas adjuntas a los
+            gastos del mes elegido, de todos los proyectos y gastos
+            generales, organizadas en carpetas por proyecto.
+          </p>
+          <form
+            action="/api/comprobantes"
+            method="GET"
+            className="flex flex-wrap items-center gap-2"
+          >
+            <input
+              type="month"
+              name="periodo"
+              defaultValue={currentPeriodo}
+              required
+              className="rounded border border-brand-border px-2 py-1.5 text-sm"
+            />
+            <button
+              type="submit"
+              className="rounded bg-brand-blue px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-navy"
+            >
+              Descargar comprobantes del mes
+            </button>
+          </form>
         </div>
 
         <h2 className="mb-3 text-sm font-semibold text-brand-navy">

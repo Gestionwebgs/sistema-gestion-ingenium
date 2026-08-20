@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { getFileSignedUrl } from "@/lib/s3";
 import { addExpenseAction, addIncomeAction } from "./actions";
 
 const formatSoles = (value: number) =>
@@ -38,6 +39,7 @@ export default async function ProyectoDetailPage({
           include: {
             paidByUser: { select: { name: true } },
             createdByUser: { select: { name: true } },
+            attachments: true,
           },
         },
         incomes: { orderBy: { date: "asc" } },
@@ -47,6 +49,19 @@ export default async function ProyectoDetailPage({
   ]);
 
   if (!project) notFound();
+
+  // Un solo link firmado por gasto (el primer comprobante adjunto), para no
+  // recargar la tabla de gastos si en el futuro se permite más de uno.
+  const attachmentUrlByExpenseId = Object.fromEntries(
+    await Promise.all(
+      project.expenses
+        .filter((e) => e.attachments.length > 0)
+        .map(async (e) => [
+          e.id,
+          await getFileSignedUrl(e.attachments[0].fileKey),
+        ])
+    )
+  ) as Record<string, string>;
 
   const orderAmountNoIgv = Number(project.orderAmountNoIgv);
   const igvAmount = Number(project.igvAmount);
@@ -191,7 +206,17 @@ export default async function ProyectoDetailPage({
                       <td className="px-3 py-2 text-right text-brand-navy">
                         S/. {formatSoles(Number(expense.amount))}
                       </td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                        {attachmentUrlByExpenseId[expense.id] && (
+                          <a
+                            href={attachmentUrlByExpenseId[expense.id]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mr-2 text-xs text-brand-blue hover:underline"
+                          >
+                            Ver comprobante
+                          </a>
+                        )}
                         <a
                           href={`/gastos/${expense.id}/editar`}
                           className="text-xs text-brand-blue hover:underline"
@@ -284,6 +309,13 @@ export default async function ProyectoDetailPage({
                   placeholder="Monto"
                   required
                   className="w-20 shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
+                />
+                <input
+                  type="file"
+                  name="file"
+                  accept="image/*,.pdf"
+                  title="Comprobante (foto o PDF), opcional"
+                  className="min-w-[10rem] shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
                 />
                 <button
                   type="submit"

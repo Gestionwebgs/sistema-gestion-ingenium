@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { getFileSignedUrl } from "@/lib/s3";
 
 const formatSoles = (value: number) =>
   value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -31,9 +32,20 @@ export default async function GastosPage() {
   if (session?.user.role !== "OWNER") redirect("/proyectos");
 
   const expenses = await prisma.expense.findMany({
-    include: { project: { select: { name: true } } },
+    include: { project: { select: { name: true } }, attachments: true },
     orderBy: { date: "desc" },
   });
+
+  const attachmentUrlByExpenseId = Object.fromEntries(
+    await Promise.all(
+      expenses
+        .filter((e) => e.attachments.length > 0)
+        .map(async (e) => [
+          e.id,
+          await getFileSignedUrl(e.attachments[0].fileKey),
+        ])
+    )
+  ) as Record<string, string>;
 
   const groups = new Map<
     string,
@@ -125,7 +137,17 @@ export default async function GastosPage() {
                         <td className="px-3 py-2 text-right text-brand-navy">
                           S/. {formatSoles(Number(expense.amount))}
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                          {attachmentUrlByExpenseId[expense.id] && (
+                            <a
+                              href={attachmentUrlByExpenseId[expense.id]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mr-2 text-xs text-brand-blue hover:underline"
+                            >
+                              Ver comprobante
+                            </a>
+                          )}
                           <a
                             href={`/gastos/${expense.id}/editar`}
                             className="text-xs text-brand-blue hover:underline"

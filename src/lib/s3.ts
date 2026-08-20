@@ -67,3 +67,22 @@ export async function getFileSignedUrl(fileKey: string): Promise<string> {
   const command = new GetObjectCommand({ Bucket: bucket, Key: fileKey });
   return getSignedUrl(s3, command, { expiresIn: 3600 });
 }
+
+// Extensión de archivo a partir del content-type, para nombrar el objeto en
+// S3/MinIO. Usado tanto en la captura por OCR como en la carga manual de
+// comprobantes al registrar/editar un gasto.
+export function extensionForContentType(contentType: string): string {
+  if (contentType === "application/pdf") return "pdf";
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/webp") return "webp";
+  return "jpg";
+}
+
+// Descarga un archivo completo (no una URL firmada) para poder incluirlo en
+// el .zip mensual de comprobantes para los contadores.
+export async function downloadFileBuffer(fileKey: string): Promise<Buffer> {
+  const command = new GetObjectCommand({ Bucket: bucket, Key: fileKey });
+  const response = await s3.send(command);
+  const byteArray = await response.Body!.transformToByteArray();
+  return Buffer.from(byteArray);
+}

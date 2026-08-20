@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { uploadReceiptFile, extensionForContentType } from "@/lib/s3";
 
 export async function addExpenseAction(projectId: string, formData: FormData) {
   const session = await auth();
@@ -39,6 +40,28 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
     paidByName = paidByUser.name;
   }
 
+  // Comprobante (foto o PDF) adjunto al registrar el gasto manualmente —
+  // opcional, mismo storage (S3/MinIO) que usa la captura por OCR.
+  let fileKey: string | null = null;
+  let fileType: string | null = null;
+  const file = formData.get("file");
+  if (file instanceof File && file.size > 0) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    fileType = file.type || "image/jpeg";
+    try {
+      fileKey = await uploadReceiptFile(
+        buffer,
+        fileType,
+        extensionForContentType(fileType)
+      );
+    } catch (error) {
+      console.error("addExpenseAction: upload to S3/MinIO failed", error);
+      throw new Error(
+        "No se pudo subir el comprobante. Revisa que el servicio de archivos esté disponible e inténtalo de nuevo."
+      );
+    }
+  }
+
   await prisma.expense.create({
     data: {
       projectId,
@@ -51,6 +74,17 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
       paidByUserId,
       paidByName,
       createdByUserId: session.user.id,
+      ...(fileKey
+        ? {
+            attachments: {
+              create: {
+                fileKey,
+                fileType,
+                uploadedByUserId: session.user.id,
+              },
+            },
+          }
+        : {}),
     },
   });
 
