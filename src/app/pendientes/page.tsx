@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { Plus } from "lucide-react";
 import { cycleTaskStatusAction } from "./actions";
+import { ResponsableFilter } from "./ResponsableFilter";
 
 const formatDate = (date: Date) =>
   new Date(date).toLocaleDateString("es-PE", { timeZone: "UTC" });
@@ -40,23 +41,42 @@ function groupBySection(tasks: Task[]) {
   return Array.from(groups.entries());
 }
 
-export default async function PendientesPage() {
+export default async function PendientesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ responsable?: string }>;
+}) {
+  const { responsable } = await searchParams;
   const session = await auth();
   if (session?.user.role !== "OWNER") redirect("/proyectos");
 
+  const allResponsables = await prisma.pendingTask.findMany({
+    where: { responsibleName: { not: null } },
+    select: { responsibleName: true },
+    distinct: ["responsibleName"],
+  });
+  const responsableOptions = allResponsables
+    .map((r) => r.responsibleName)
+    .filter((name): name is string => !!name)
+    .sort((a, b) => a.localeCompare(b));
+
+  const filter = responsable ? { responsibleName: responsable } : {};
+
   const [proyectosTasks, internaTasks] = await Promise.all([
     prisma.pendingTask.findMany({
-      where: { section: "PROYECTOS" },
+      where: { section: "PROYECTOS", ...filter },
       orderBy: { createdAt: "asc" },
     }),
     prisma.pendingTask.findMany({
-      where: { section: "GESTION_INTERNA" },
+      where: { section: "GESTION_INTERNA", ...filter },
       orderBy: { createdAt: "asc" },
     }),
   ]);
 
   const proyectosGroups = groupBySection(proyectosTasks);
   const internaGroups = groupBySection(internaTasks);
+  const noResultsForFilter =
+    !!responsable && proyectosGroups.length === 0 && internaGroups.length === 0;
 
   return (
     <AppShell
@@ -73,7 +93,8 @@ export default async function PendientesPage() {
               estado para avanzarlo.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <ResponsableFilter options={responsableOptions} />
             <a
               href="/pendientes/importar"
               className="flex items-center justify-center gap-2 rounded-md border border-brand-border px-4 py-2 text-sm font-medium text-brand-navy transition hover:bg-gray-50"
@@ -89,6 +110,12 @@ export default async function PendientesPage() {
             </a>
           </div>
         </header>
+
+        {noResultsForFilter && (
+          <div className="mb-6 rounded-lg border border-dashed border-brand-border bg-brand-surface py-8 text-center text-sm text-brand-muted">
+            No hay pendientes para &quot;{responsable}&quot;.
+          </div>
+        )}
 
         <TaskSection title="Pendientes de proyectos" groups={proyectosGroups} />
         <TaskSection title="Gestión interna" groups={internaGroups} />
