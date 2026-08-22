@@ -2,11 +2,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
-import {
-  toggleLoanStatusAction,
-  createLoanPaymentAction,
-  deleteLoanPaymentAction,
-} from "../actions";
+import { Plus } from "lucide-react";
 
 const formatAmount = (value: number, currency: string) =>
   `${currency === "USD" ? "$" : "S/."} ${value.toLocaleString("es-PE", {
@@ -17,7 +13,10 @@ const formatAmount = (value: number, currency: string) =>
 const formatDate = (date: Date) =>
   new Date(date).toLocaleDateString("es-PE", { timeZone: "UTC" });
 
-export default async function PrestamoTerceroDetailPage({
+// Ficha del prestamista: "una sola relación" de todos sus préstamos, todos
+// los abonos hechos (de cualquiera de sus préstamos) y el saldo total
+// pendiente por moneda.
+export default async function PrestamistaDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -26,28 +25,35 @@ export default async function PrestamoTerceroDetailPage({
   const session = await auth();
   const isOwner = session!.user.role === "OWNER";
 
-  const loan = await prisma.loan.findUnique({
-    where: isOwner ? { id } : { id, borrowerUserId: session!.user.id },
+  const lender = await prisma.lender.findUnique({
+    where: { id },
     include: {
-      borrowerUser: true,
-      payments: { orderBy: { date: "asc" } },
+      loans: {
+        where: isOwner ? {} : { borrowerUserId: session!.user.id },
+        include: { payments: true, borrowerUser: true },
+        orderBy: { loanDate: "desc" },
+      },
     },
   });
-  if (!loan) notFound();
+  if (!lender) notFound();
+  if (!isOwner && lender.loans.length === 0) notFound();
 
-  const amount = Number(loan.amount);
-  const paidInSameCurrency = loan.payments.filter(
-    (p) => p.currency === loan.currency
-  );
-  const totalPaid = paidInSameCurrency.reduce((s, p) => s + Number(p.amount), 0);
-  const balance = amount - totalPaid;
-
-  const otherCurrencyPayments = loan.payments.filter(
-    (p) => p.currency !== loan.currency
-  );
-
-  const toggleStatus = toggleLoanStatusAction.bind(null, loan.id);
-  const addPayment = createLoanPaymentAction.bind(null, loan.id);
+  const totalsByCurrency: Record<
+    string,
+    { amount: number; paid: number; balance: number }
+  > = {};
+  for (const loan of lender.loans) {
+    const paid = loan.payments
+      .filter((p) => p.currency === loan.currency)
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+    const balance = Number(loan.amount) - paid;
+    if (!totalsByCurrency[loan.currency]) {
+      totalsByCurrency[loan.currency] = { amount: 0, paid: 0, balance: 0 };
+    }
+    totalsByCurrency[loan.currency].amount += Number(loan.amount);
+    totalsByCurrency[loan.currency].paid += paid;
+    totalsByCurrency[loan.currency].balance += balance;
+  }
 
   return (
     <AppShell
@@ -65,210 +71,135 @@ export default async function PrestamoTerceroDetailPage({
               ← Préstamos de terceros
             </a>
             <h1 className="mt-1 text-xl font-bold text-brand-navy">
-              {loan.lenderName}
+              {lender.name}
             </h1>
-            <p className="text-sm text-brand-muted">
-              {loan.borrowerUser ? `Contacto: ${loan.borrowerUser.name}` : "Empresa (general)"}
-            </p>
+            {(lender.phone || lender.notes) && (
+              <p className="text-sm text-brand-muted">
+                {lender.phone}
+                {lender.phone && lender.notes ? " · " : ""}
+                {lender.notes}
+              </p>
+            )}
           </div>
           {isOwner && (
-            <div className="flex shrink-0 gap-2">
-              <a
-                href={`/prestamos-terceros/${loan.id}/editar`}
-                className="rounded-md border border-brand-border px-3 py-1.5 text-sm font-medium text-brand-navy transition hover:bg-gray-50"
-              >
-                Editar
-              </a>
-              <form action={toggleStatus}>
-                <button
-                  type="submit"
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium uppercase tracking-wide transition ${
-                    loan.status === "PENDIENTE"
-                      ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                      : "bg-green-100 text-green-700 hover:bg-green-200"
-                  }`}
-                >
-                  {loan.status}
-                </button>
-              </form>
-            </div>
+            <a
+              href={`/prestamos-terceros/${lender.id}/prestamos/nuevo`}
+              className="flex shrink-0 items-center gap-2 rounded-md bg-brand-blue px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-navy"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Nuevo préstamo
+            </a>
           )}
         </header>
 
-        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <InfoCard label="Fecha del préstamo" value={formatDate(loan.loanDate)} />
-          <InfoCard
-            label="Fecha de pago"
-            value={loan.dueDate ? formatDate(loan.dueDate) : "—"}
-          />
-          <InfoCard
-            label="Interés"
-            value={
-              loan.interestAmount
-                ? formatAmount(Number(loan.interestAmount), loan.interestCurrency ?? "PEN")
-                : "—"
-            }
-          />
-          <InfoCard
-            label="Comisión del banco"
-            value={
-              loan.bankCommission
-                ? formatAmount(Number(loan.bankCommission), loan.bankCommissionCurrency ?? "PEN")
-                : "—"
-            }
-          />
-        </div>
-
-        <div className="mb-8 rounded-lg border border-brand-border bg-brand-surface p-5">
-          <h2 className="mb-4 text-sm font-semibold text-brand-navy">
-            Control del préstamo
-          </h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <MoneyStat
-              label="Monto prestado"
-              value={formatAmount(amount, loan.currency)}
-            />
-            <MoneyStat
-              label="Total abonado"
-              value={formatAmount(totalPaid, loan.currency)}
-            />
-            <MoneyStat
-              label="Saldo pendiente"
-              value={formatAmount(Math.max(balance, 0), loan.currency)}
-              highlight
-              warn={balance > 0.01}
-            />
-          </div>
-          {loan.notes && (
-            <p className="mt-4 border-t border-brand-border pt-4 text-sm text-brand-muted">
-              {loan.notes}
-            </p>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-brand-border bg-brand-surface">
-          <h2 className="border-b border-brand-border px-5 py-3 text-sm font-semibold text-brand-navy">
-            Registro de abonos
-          </h2>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase text-brand-muted">
-              <tr>
-                <th className="px-3 py-2">Fecha</th>
-                <th className="px-3 py-2">Notas</th>
-                <th className="px-3 py-2 text-right">Monto</th>
-                {isOwner && <th className="px-3 py-2" />}
-              </tr>
-            </thead>
-            <tbody>
-              {loan.payments.map((payment) => (
-                <tr key={payment.id} className="border-t border-brand-border">
-                  <td className="px-3 py-2 text-brand-muted">
-                    {formatDate(payment.date)}
-                  </td>
-                  <td className="px-3 py-2 text-brand-navy">
-                    {payment.notes ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right text-brand-navy">
-                    {formatAmount(Number(payment.amount), payment.currency)}
-                  </td>
-                  {isOwner && (
-                    <td className="px-3 py-2 text-right">
-                      <form
-                        action={async () => {
-                          "use server";
-                          await deleteLoanPaymentAction(loan.id, payment.id);
-                        }}
-                      >
-                        <button
-                          type="submit"
-                          className="text-xs text-red-600 hover:underline"
-                        >
-                          Eliminar
-                        </button>
-                      </form>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {loan.payments.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={isOwner ? 4 : 3}
-                    className="px-3 py-6 text-center text-sm text-brand-muted"
-                  >
-                    Aún no hay abonos registrados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-
-          {isOwner && (
-            <form
-              action={addPayment}
-              className="flex flex-wrap items-center gap-2 border-t border-brand-border p-3"
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {Object.entries(totalsByCurrency).map(([currency, totals]) => (
+            <div
+              key={currency}
+              className="rounded-lg border border-brand-border bg-brand-surface p-5"
             >
-              <input
-                type="date"
-                name="date"
-                required
-                className="w-[9.5rem] shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
-              />
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                name="amount"
-                placeholder="Monto"
-                required
-                className="w-28 shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
-              />
-              <select
-                name="currency"
-                defaultValue={loan.currency}
-                className="shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
-              >
-                <option value="PEN">S/.</option>
-                <option value="USD">$</option>
-              </select>
-              <input
-                type="text"
-                name="notes"
-                placeholder="Notas (opcional)"
-                className="min-w-[8rem] flex-1 rounded border border-brand-border px-2 py-1.5 text-xs"
-              />
-              <button
-                type="submit"
-                className="shrink-0 rounded-md bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-navy"
-              >
-                Agregar abono
-              </button>
-            </form>
-          )}
-
-          {otherCurrencyPayments.length > 0 && (
-            <p className="border-t border-brand-border px-5 py-3 text-xs text-brand-muted">
-              También hay {otherCurrencyPayments.length} abono
-              {otherCurrencyPayments.length === 1 ? "" : "s"} en{" "}
-              {otherCurrencyPayments[0].currency === "USD" ? "dólares" : "soles"}{" "}
-              (no se descuentan del saldo de arriba, que está en{" "}
-              {loan.currency === "USD" ? "dólares" : "soles"}).
+              <h2 className="mb-4 text-sm font-semibold text-brand-navy">
+                Total en {currency === "USD" ? "dólares" : "soles"}
+              </h2>
+              <div className="grid grid-cols-3 gap-4">
+                <MoneyStat
+                  label="Prestado"
+                  value={formatAmount(totals.amount, currency)}
+                />
+                <MoneyStat
+                  label="Abonado"
+                  value={formatAmount(totals.paid, currency)}
+                />
+                <MoneyStat
+                  label="Saldo pendiente"
+                  value={formatAmount(Math.max(totals.balance, 0), currency)}
+                  highlight
+                  warn={totals.balance > 0.01}
+                />
+              </div>
+            </div>
+          ))}
+          {Object.keys(totalsByCurrency).length === 0 && (
+            <p className="text-sm text-brand-muted">
+              Todavía no tiene préstamos.
             </p>
           )}
         </div>
+
+        <section className="mb-8">
+          <h2 className="mb-3 text-sm font-semibold text-brand-navy">
+            Préstamos
+          </h2>
+          <div className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left text-xs uppercase text-brand-muted">
+                <tr>
+                  <th className="px-3 py-2">Fecha</th>
+                  <th className="px-3 py-2">A nombre de</th>
+                  <th className="px-3 py-2 text-right">Monto</th>
+                  <th className="px-3 py-2 text-right">Saldo</th>
+                  <th className="px-3 py-2">Estado</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {lender.loans.map((loan) => {
+                  const paid = loan.payments
+                    .filter((p) => p.currency === loan.currency)
+                    .reduce((sum, p) => sum + Number(p.amount), 0);
+                  const balance = Number(loan.amount) - paid;
+                  return (
+                    <tr key={loan.id} className="border-t border-brand-border">
+                      <td className="px-3 py-2 text-brand-muted">
+                        {formatDate(loan.loanDate)}
+                      </td>
+                      <td className="px-3 py-2 text-brand-muted">
+                        {loan.borrowerUser?.name ?? "Empresa (general)"}
+                      </td>
+                      <td className="px-3 py-2 text-right text-brand-navy">
+                        {formatAmount(Number(loan.amount), loan.currency)}
+                      </td>
+                      <td className="px-3 py-2 text-right text-brand-navy">
+                        {formatAmount(Math.max(balance, 0), loan.currency)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`rounded px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${
+                            loan.status === "PENDIENTE"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {loan.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <a
+                          href={`/prestamos-terceros/${lender.id}/prestamos/${loan.id}`}
+                          className="text-xs text-brand-blue hover:underline"
+                        >
+                          Ver
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {lender.loans.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-3 py-6 text-center text-sm text-brand-muted"
+                    >
+                      Aún no hay préstamos.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </AppShell>
-  );
-}
-
-function InfoCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-brand-border bg-brand-surface p-4">
-      <p className="text-xs uppercase tracking-wide text-brand-muted">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-brand-navy">{value}</p>
-    </div>
   );
 }
 

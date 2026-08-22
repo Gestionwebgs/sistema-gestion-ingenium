@@ -359,10 +359,32 @@ model ReimbursementItem {
   @@map("reimbursement_items")
 }
 
+// Prestamista (persona o entidad que le presta dinero a la empresa). Un mismo
+// prestamista puede tener varios préstamos a lo largo del tiempo — esta ficha
+// es lo que permite ver, en un solo lugar, todos sus préstamos, los abonos
+// hechos y el saldo total pendiente.
+model Lender {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  loans Loan[]
+
+  @@map("lenders")
+}
+
 // Dinero prestado por terceros para financiar la operación (incluye deudas de tarjeta
 // de crédito atribuidas a una persona). Único módulo con soporte multi-moneda.
 model Loan {
   id               String        @id @default(cuid())
+  // lenderId es la relación "real" (nueva). lenderName queda como copia de
+  // texto (siempre igual a lender.name en préstamos nuevos) para no romper
+  // pantallas/reportes viejos y como respaldo si algún préstamo quedara sin
+  // prestamista asignado — ver prisma/backfill-lenders.ts.
+  lenderId         String?       @map("lender_id")
+  lender           Lender?       @relation(fields: [lenderId], references: [id])
   lenderName       String        @map("lender_name")
   borrowerUserId   String?       @map("borrower_user_id")
   borrowerUser     User?         @relation("LoanBorrower", fields: [borrowerUserId], references: [id])

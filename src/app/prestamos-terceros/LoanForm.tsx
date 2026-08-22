@@ -12,7 +12,6 @@ export function LoanForm({
   cancelHref: string;
   submitLabel: string;
   defaults?: {
-    lenderName?: string;
     borrowerUserId?: string;
     amount?: number;
     currency?: string;
@@ -30,23 +29,6 @@ export function LoanForm({
       action={action}
       className="space-y-4 rounded-lg border border-brand-border bg-brand-surface p-5"
     >
-      <div>
-        <label
-          htmlFor="lenderName"
-          className="mb-1 block text-sm font-medium text-brand-navy"
-        >
-          Prestamista *
-        </label>
-        <input
-          id="lenderName"
-          name="lenderName"
-          type="text"
-          required
-          defaultValue={defaults?.lenderName}
-          className="w-full rounded-md border border-brand-border px-3 py-2 text-sm text-brand-navy focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
-        />
-      </div>
-
       <div>
         <label
           htmlFor="borrowerUserId"
