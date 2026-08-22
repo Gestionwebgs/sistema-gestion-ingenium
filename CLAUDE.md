@@ -250,4 +250,17 @@ El usuario pidió que en "Préstamos de terceros" se pueda crear un prestamista 
 - `/prestamos-terceros/[id]/prestamos/[loanId]` y `.../editar` — detalle/edición de un préstamo puntual (contenido igual al que había antes en `/prestamos-terceros/[id]` y `/prestamos-terceros/[id]/editar`, solo movido de lugar).
 - El archivo viejo `src/app/prestamos-terceros/[id]/editar/page.tsx` se eliminó (`git rm`) porque quedó en conflicto de rutas con el nuevo esquema.
 
-No se tocó `/prestamos` (préstamos de personal/adelantos) ni ningún otro módulo.
+No se tocó `/prestamos` (préstamos de personal/adelantos) ni ningún otro módulo en esa sesión — sí se tocó después, ver siguiente sección.
+
+## Préstamos de personal: saldo pendiente y abonos por persona (2026-08-22)
+
+El usuario pidió que, al registrar un gasto, se pueda elegir entre "todas las personas que hacen compras o gastos" (Raúl, Mervis, Anggie, Grelimar, Máximo) con opción de agregar más, que cada gasto personal se sume automático a esa persona en `/prestamos`, y que ahí mismo se vea la relación de abonos hechos a su favor y el saldo pendiente final.
+
+**Revisado antes de tocar código — ya funcionaba solo:** en cuanto un gasto se registra con `payment_source = PERSONAL` y un `paidByUserId`/`paidByName`, ya aparece agrupado automáticamente en `/prestamos` (no hizo falta ningún cambio para esto).
+
+**Decisión del usuario sobre cómo agregar personas:** se le preguntó si Raúl/Mervis/Anggie/Grelimar/Máximo debían ser usuarios reales del sistema (con correo/contraseña, vía la pantalla "Usuarios" que ya existe) o una ficha liviana sin acceso (como se hizo con `Lender`/prestamista). **Eligió usuarios reales** — no hizo falta ningún cambio de código para esto, el usuario los crea él mismo desde `/usuarios/nuevo`. Ventaja adicional (no pedida explícitamente pero relevante): al ser usuarios reales con rol `RESPONSABLE`, después pueden entrar ellos mismos desde su celular a capturar facturas y registrar sus propios gastos, en vez de que el OWNER les cargue todo a mano.
+
+**Lo que sí se construyó:**
+- `src/app/prestamos/page.tsx`: ahora calcula `pendingTotal` (saldo pendiente) por persona, y trae TODOS los `Reimbursement` (antes solo traía los últimos 10, globales) y los reparte dentro de cada grupo por `paidToUserId`/`paidToName` — ya no hay una lista global mezclada de "Pagos recientes".
+- `src/app/prestamos/PendingExpensesGroup.tsx`: ahora muestra un badge "Saldo pendiente: S/. X" en el encabezado de la tarjeta de cada persona, y una sección "Abonos realizados" con los pagos hechos a esa persona específica (fecha, nota, monto) — antes no existía esta lista por persona.
+- No se tocó el modelo de datos ni las acciones (`createReimbursementAction`) — el cálculo de saldo pendiente ya existía por gasto, solo faltaba sumarlo y mostrarlo, y filtrar los abonos por persona en vez de mostrar los últimos 10 de todos.

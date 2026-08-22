@@ -4,9 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { PendingExpensesGroup } from "./PendingExpensesGroup";
 
-const formatSoles = (value: number) =>
-  value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 const formatDate = (date: Date) =>
   new Date(date).toLocaleDateString("es-PE", { timeZone: "UTC" });
 
@@ -18,15 +15,21 @@ export default async function PrestamosPage() {
   // bolsillo para un gasto de la empresa/proyecto, pendiente de devolver.
   // Se agrupa por usuario si tiene cuenta, o por nombre si se registró a
   // mano (ej. un capataz de obra sin cuenta en el sistema).
-  const personalExpenses = await prisma.expense.findMany({
-    where: { paymentSource: "PERSONAL" },
-    include: {
-      reimbursementItems: true,
-      paidByUser: true,
-      project: { select: { name: true } },
-    },
-    orderBy: { date: "asc" },
-  });
+  const [personalExpenses, allReimbursements] = await Promise.all([
+    prisma.expense.findMany({
+      where: { paymentSource: "PERSONAL" },
+      include: {
+        reimbursementItems: true,
+        paidByUser: true,
+        project: { select: { name: true } },
+      },
+      orderBy: { date: "asc" },
+    }),
+    prisma.reimbursement.findMany({
+      orderBy: { date: "desc" },
+      include: { paidToUser: true },
+    }),
+  ]);
 
   type Group = {
     key: string;
@@ -38,6 +41,13 @@ export default async function PrestamosPage() {
       description: string;
       pending: number;
       projectName: string | null;
+    }[];
+    pendingTotal: number;
+    reimbursements: {
+      id: string;
+      date: string;
+      amount: number;
+      description: string | null;
     }[];
   };
 
@@ -59,24 +69,37 @@ export default async function PrestamosPage() {
         paidToUserId: expense.paidByUserId,
         paidToName: name,
         expenses: [],
+        pendingTotal: 0,
+        reimbursements: [],
       });
     }
-    groupMap.get(key)!.expenses.push({
+    const group = groupMap.get(key)!;
+    group.expenses.push({
       id: expense.id,
       date: formatDate(expense.date),
       description: expense.description,
       pending,
       projectName: expense.project?.name ?? null,
     });
+    group.pendingTotal += pending;
+  }
+
+  // Relación de abonos (pagos ya hechos) a favor de cada persona, dentro de
+  // su misma tarjeta — no mezclados con los de las demás.
+  for (const reimbursement of allReimbursements) {
+    const name = reimbursement.paidToUser?.name ?? reimbursement.paidToName;
+    const key = reimbursement.paidToUserId ?? `name:${name}`;
+    const group = groupMap.get(key);
+    if (!group) continue;
+    group.reimbursements.push({
+      id: reimbursement.id,
+      date: formatDate(reimbursement.date),
+      amount: Number(reimbursement.amount),
+      description: reimbursement.description,
+    });
   }
 
   const personalGroups = Array.from(groupMap.values());
-
-  const recentReimbursements = await prisma.reimbursement.findMany({
-    orderBy: { date: "desc" },
-    take: 10,
-    include: { paidToUser: true },
-  });
 
   return (
     <AppShell
@@ -105,38 +128,11 @@ export default async function PrestamosPage() {
               paidToUserId={group.paidToUserId}
               paidToName={group.paidToName}
               expenses={group.expenses}
+              pendingTotal={group.pendingTotal}
+              reimbursements={group.reimbursements}
             />
           ))}
         </div>
-
-        {recentReimbursements.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-muted">
-              Pagos recientes
-            </h3>
-            <div className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface">
-              {recentReimbursements.map((r) => (
-                <div
-                  key={r.id}
-                  className="flex items-center justify-between border-b border-brand-border px-4 py-3 text-sm last:border-b-0"
-                >
-                  <div>
-                    <p className="font-medium text-brand-navy">
-                      {r.paidToUser?.name ?? r.paidToName}
-                    </p>
-                    <p className="text-xs text-brand-muted">
-                      {formatDate(r.date)}
-                      {r.description ? ` · ${r.description}` : ""}
-                    </p>
-                  </div>
-                  <span className="font-semibold text-brand-navy">
-                    S/. {formatSoles(Number(r.amount))}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </AppShell>
   );

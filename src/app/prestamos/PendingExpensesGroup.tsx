@@ -14,14 +14,25 @@ type PendingExpense = {
   projectName: string | null;
 };
 
+type Reimbursement = {
+  id: string;
+  date: string;
+  amount: number;
+  description: string | null;
+};
+
 export function PendingExpensesGroup({
   paidToUserId,
   paidToName,
   expenses,
+  pendingTotal,
+  reimbursements,
 }: {
   paidToUserId: string | null;
   paidToName: string;
   expenses: PendingExpense[];
+  pendingTotal: number;
+  reimbursements: Reimbursement[];
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
@@ -40,7 +51,12 @@ export function PendingExpensesGroup({
 
   return (
     <div className="rounded-lg border border-brand-border bg-brand-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold text-brand-navy">{paidToName}</h3>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-brand-navy">{paidToName}</h3>
+        <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+          Saldo pendiente: S/. {formatSoles(pendingTotal)}
+        </span>
+      </div>
 
       <form action={createReimbursementAction} className="space-y-3">
         {paidToUserId && (
@@ -110,6 +126,32 @@ export function PendingExpensesGroup({
           </div>
         </div>
       </form>
+
+      {reimbursements.length > 0 && (
+        <div className="mt-4 border-t border-brand-border pt-3">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-muted">
+            Abonos realizados
+          </h4>
+          <div className="divide-y divide-brand-border rounded-md border border-brand-border">
+            {reimbursements.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between px-3 py-2 text-sm"
+              >
+                <div>
+                  <span className="text-xs text-brand-muted">{r.date}</span>
+                  {r.description && (
+                    <span className="ml-2 text-brand-navy">{r.description}</span>
+                  )}
+                </div>
+                <span className="font-medium text-brand-navy">
+                  S/. {formatSoles(r.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
