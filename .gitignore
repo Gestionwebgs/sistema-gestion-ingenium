@@ -47,6 +47,7 @@ next-env.d.ts
 /.agents/
 /.windsurf/
 /.claude/skills/
+/.claude/settings.local.json
 skills-lock.json
 
 # tesseract.js OCR language data cache (downloaded on demand, not source)
