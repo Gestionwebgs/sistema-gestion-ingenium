@@ -110,9 +110,13 @@ export default async function CapturasPendientesPage() {
                   <select
                     name="projectId"
                     defaultValue=""
+                    required
                     className="rounded border border-brand-border px-2 py-1.5 text-sm"
                   >
-                    <option value="">Sin proyecto (general)</option>
+                    <option value="" disabled>
+                      Elegí un proyecto...
+                    </option>
+                    <option value="GENERAL">Sin proyecto (general)</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}

@@ -85,12 +85,24 @@ export default async function PrestamosPage() {
   }
 
   // Relación de abonos (pagos ya hechos) a favor de cada persona, dentro de
-  // su misma tarjeta — no mezclados con los de las demás.
+  // su misma tarjeta — no mezclados con los de las demás. Si a alguien ya
+  // se le devolvió todo (no le queda ningún gasto con saldo pendiente), no
+  // tiene tarjeta creada arriba — se crea una aquí igual, sin gastos
+  // pendientes, para que su historial de abonos no desaparezca de la vista.
   for (const reimbursement of allReimbursements) {
     const name = reimbursement.paidToUser?.name ?? reimbursement.paidToName;
     const key = reimbursement.paidToUserId ?? `name:${name}`;
-    const group = groupMap.get(key);
-    if (!group) continue;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        key,
+        paidToUserId: reimbursement.paidToUserId,
+        paidToName: name,
+        expenses: [],
+        pendingTotal: 0,
+        reimbursements: [],
+      });
+    }
+    const group = groupMap.get(key)!;
     group.reimbursements.push({
       id: reimbursement.id,
       date: formatDate(reimbursement.date),

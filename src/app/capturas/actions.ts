@@ -96,7 +96,15 @@ export async function classifyCaptureAction(
     throw new Error("Captura no encontrada");
   }
 
-  const projectId = String(formData.get("projectId") ?? "").trim() || null;
+  // "GENERAL" es la elección explícita de "sin proyecto"; value="" es el
+  // placeholder deshabilitado ("Elegí un proyecto...") — si por alguna
+  // razón llega vacío igual (ej. un cliente viejo sin JS), no se asume
+  // "general" en silencio, se rechaza para forzar a elegir a propósito.
+  const projectIdRaw = String(formData.get("projectId") ?? "").trim();
+  if (!projectIdRaw) {
+    throw new Error("Elegí un proyecto (o \"Sin proyecto (general)\") antes de confirmar.");
+  }
+  const projectId = projectIdRaw === "GENERAL" ? null : projectIdRaw;
   const date = new Date(String(formData.get("date") ?? ""));
   const description = String(formData.get("description") ?? "").trim();
   const amount = Number(formData.get("amount") ?? 0) || 0;
