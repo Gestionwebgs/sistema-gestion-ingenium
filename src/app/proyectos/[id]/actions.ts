@@ -91,6 +91,37 @@ export async function addExpenseAction(projectId: string, formData: FormData) {
   revalidatePath(`/proyectos/${projectId}`);
 }
 
+const IGV_RATE = 0.18;
+
+export async function addInvoiceAction(projectId: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user) throw new Error("No autenticado");
+
+  const purchaseOrderNumber =
+    String(formData.get("purchaseOrderNumber") ?? "").trim() || null;
+  const quoteCode = String(formData.get("quoteCode") ?? "").trim() || null;
+  const description = String(formData.get("description") ?? "").trim();
+  const amountNet = Number(formData.get("amountNet") ?? 0) || 0;
+
+  if (!description || amountNet <= 0) return;
+
+  const igvAmount = Math.round(amountNet * IGV_RATE * 100) / 100;
+
+  await prisma.invoice.create({
+    data: {
+      projectId,
+      purchaseOrderNumber,
+      quoteCode,
+      description,
+      amountNet,
+      igvAmount,
+      createdByUserId: session.user.id,
+    },
+  });
+
+  revalidatePath(`/proyectos/${projectId}`);
+}
+
 export async function addIncomeAction(projectId: string, formData: FormData) {
   const session = await auth();
   if (!session?.user) throw new Error("No autenticado");

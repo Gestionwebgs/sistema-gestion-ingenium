@@ -143,6 +143,7 @@ model User {
   responsiblePendingTasks PendingTask[]        @relation("PendingTaskResponsible")
   createdPendingTasks     PendingTask[]        @relation("PendingTaskCreatedBy")
   createdQuotes           Quote[]              @relation("QuoteCreatedBy")
+  createdInvoices         Invoice[]            @relation("InvoiceCreatedBy")
 
   @@map("users")
 }
@@ -220,6 +221,7 @@ model Project {
   members        ProjectMember[]
   expenses       Expense[]
   incomes        Income[]
+  invoices       Invoice[]
 
   @@map("projects")
 }
@@ -468,4 +470,42 @@ model Quote {
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
   @@map("quotes")
+}
+
+// Facturación/valorizaciones por orden de compra — réplica de la "Relación
+// de Órdenes" que se llevaba en Excel, ligada a cada proyecto (una fila por
+// factura/valorización enviada, ej. "Valorización 1", "Valorización 2").
+// El estado (sin factura / pendiente de pago / pagado) NO se guarda como
+// campo: se calcula siempre a partir de hesRequested/hesReceived/paid (ver
+// src/app/facturacion/status.ts), para no tener un dato redundante que se
+// pueda desincronizar de esos tres campos.
+model Invoice {
+  id                  String    @id @default(cuid())
+  // Opcional (igual que Expense/Income) para poder importar filas que
+  // todavía no se identificó a qué proyecto pertenecen — la pantalla de
+  // lista avisa si queda alguna así, para asignarla después.
+  projectId           String?   @map("project_id")
+  project             Project?  @relation(fields: [projectId], references: [id])
+  purchaseOrderNumber String?   @map("purchase_order_number")
+  quoteCode           String?   @map("quote_code")
+  solicitantName      String?   @map("solicitant_name")
+  description         String
+  hesRequested        Boolean   @default(false) @map("hes_requested")
+  hesRequestedDate    DateTime? @map("hes_requested_date")
+  hesReceived         Boolean   @default(false) @map("hes_received")
+  invoiceEnteredDate  DateTime? @map("invoice_entered_date")
+  paid                Boolean   @default(false)
+  paidDate            DateTime? @map("paid_date")
+  amountNet           Decimal   @map("amount_net") @db.Decimal(12, 2)
+  igvAmount           Decimal   @map("igv_amount") @db.Decimal(12, 2)
+  // Tasa de detracción (0.12 = 12%) sobre (amountNet + igvAmount) — se
+  // guarda por fila porque no todos los servicios tienen la misma tasa.
+  detractionPercent   Decimal   @default(0.12) @map("detraction_percent") @db.Decimal(5, 4)
+  notes               String?
+  createdByUserId     String    @map("created_by_user_id")
+  createdByUser       User      @relation("InvoiceCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("invoices")
 }

@@ -3,7 +3,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { getFileSignedUrl } from "@/lib/s3";
-import { addExpenseAction, addIncomeAction } from "./actions";
+import { addExpenseAction, addIncomeAction, addInvoiceAction } from "./actions";
+import {
+  invoiceStatus,
+  INVOICE_STATUS_LABELS,
+  INVOICE_STATUS_STYLES,
+} from "@/app/facturacion/status";
 
 const formatSoles = (value: number) =>
   value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -43,6 +48,7 @@ export default async function ProyectoDetailPage({
           },
         },
         incomes: { orderBy: { date: "asc" } },
+        invoices: { orderBy: { createdAt: "asc" } },
       },
     }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
@@ -84,6 +90,7 @@ export default async function ProyectoDetailPage({
 
   const addExpense = addExpenseAction.bind(null, project.id);
   const addIncome = addIncomeAction.bind(null, project.id);
+  const addInvoice = addInvoiceAction.bind(null, project.id);
 
   return (
     <AppShell
@@ -402,6 +409,121 @@ export default async function ProyectoDetailPage({
             </div>
           </section>
         </div>
+
+        <section className="mt-6">
+          <h2 className="mb-3 text-sm font-semibold text-brand-navy">
+            Facturación (órdenes / valorizaciones)
+          </h2>
+          <div className="overflow-x-auto rounded-lg border border-brand-border bg-brand-surface">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left text-xs uppercase text-brand-muted">
+                <tr>
+                  <th className="px-3 py-2">Descripción</th>
+                  <th className="px-3 py-2">OC</th>
+                  <th className="px-3 py-2 text-right">Monto neto</th>
+                  <th className="px-3 py-2 text-right">Total</th>
+                  <th className="px-3 py-2">Estado</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {project.invoices.map((inv) => {
+                  const status = invoiceStatus(inv);
+                  const total = Number(inv.amountNet) + Number(inv.igvAmount);
+                  return (
+                    <tr key={inv.id} className="border-t border-brand-border">
+                      <td className="px-3 py-2 text-brand-navy">
+                        {inv.description}
+                        {inv.quoteCode && (
+                          <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-brand-muted">
+                            {inv.quoteCode}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-brand-muted">
+                        {inv.purchaseOrderNumber ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right text-brand-navy">
+                        S/. {formatSoles(Number(inv.amountNet))}
+                      </td>
+                      <td className="px-3 py-2 text-right text-brand-navy">
+                        S/. {formatSoles(total)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`rounded px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${INVOICE_STATUS_STYLES[status]}`}
+                        >
+                          {INVOICE_STATUS_LABELS[status]}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <a
+                          href={`/facturacion/${inv.id}/editar`}
+                          className="text-xs text-brand-blue hover:underline"
+                        >
+                          Editar
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {project.invoices.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-3 py-6 text-center text-sm text-brand-muted"
+                    >
+                      Aún no hay facturas registradas.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            <form
+              action={addInvoice}
+              className="flex flex-wrap items-center gap-2 border-t border-brand-border p-3"
+            >
+              <input
+                type="text"
+                name="description"
+                placeholder="Descripción (ej. Valorización 1)"
+                required
+                className="min-w-[10rem] flex-1 rounded border border-brand-border px-2 py-1.5 text-xs"
+              />
+              <input
+                type="text"
+                name="purchaseOrderNumber"
+                placeholder="N° OC"
+                className="w-32 shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
+              />
+              <input
+                type="text"
+                name="quoteCode"
+                placeholder="N° cotización"
+                className="w-36 shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
+              />
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="amountNet"
+                placeholder="Monto neto"
+                required
+                className="w-28 shrink-0 rounded border border-brand-border px-2 py-1.5 text-xs"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-navy"
+              >
+                Agregar
+              </button>
+            </form>
+            <p className="border-t border-brand-border px-3 py-2 text-xs text-brand-muted">
+              Después de agregar, editá cada fila para completar HES,
+              detracción, fecha de pago, etc.
+            </p>
+          </div>
+        </section>
       </div>
     </AppShell>
   );
