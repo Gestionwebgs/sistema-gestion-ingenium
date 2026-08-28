@@ -39,6 +39,15 @@ export default async function PrestamoTerceroDetailPage({
   if (!loan || !loan.lender) notFound();
 
   const amount = Number(loan.amount);
+  // Préstamos de antes de que existiera `interestRate` solo tienen el
+  // interés como monto fijo — se infiere la tasa equivalente para poder
+  // mostrarla igual (mismo cálculo que en la página de editar).
+  const impliedRate =
+    loan.interestRate != null
+      ? Number(loan.interestRate)
+      : loan.interestAmount && amount > 0
+        ? Math.round((Number(loan.interestAmount) / amount) * 100 * 1000) / 1000
+        : null;
   // El interés y la comisión solo se suman al total a pagar cuando están en
   // la misma moneda que el préstamo (si alguna vez quedan en otra moneda,
   // por ejemplo de un préstamo viejo, se ignoran acá para no mezclar
@@ -112,18 +121,18 @@ export default async function PrestamoTerceroDetailPage({
           )}
         </header>
 
-        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-5">
           <InfoCard label="Fecha del préstamo" value={formatDate(loan.loanDate)} />
           <InfoCard
             label="Fecha de pago"
             value={loan.dueDate ? formatDate(loan.dueDate) : "—"}
           />
           <InfoCard
-            label={
-              loan.interestRate
-                ? `Interés (${Number(loan.interestRate)}%)`
-                : "Interés"
-            }
+            label="Tasa de interés calculada"
+            value={impliedRate != null ? `${impliedRate}%` : "—"}
+          />
+          <InfoCard
+            label="Interés"
             value={
               loan.interestAmount
                 ? formatAmount(Number(loan.interestAmount), loan.interestCurrency ?? "PEN")
