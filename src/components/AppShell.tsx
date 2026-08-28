@@ -9,6 +9,7 @@ import {
   Receipt,
   ListChecks,
   Contact,
+  FileText,
 } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +25,7 @@ type AppShellProps = {
     | "prestamos-terceros"
     | "gastos"
     | "pendientes"
+    | "cotizaciones"
     | "contactos"
     | "panel"
     | "usuarios";
@@ -93,6 +95,12 @@ export async function AppShell({
             label: "Pendientes",
             icon: <ListChecks className={iconClass} strokeWidth={1.75} />,
             active: activeNav === "pendientes",
+          },
+          {
+            href: "/cotizaciones",
+            label: "Cotizaciones",
+            icon: <FileText className={iconClass} strokeWidth={1.75} />,
+            active: activeNav === "cotizaciones",
           },
         ] satisfies NavItem[])
       : []),

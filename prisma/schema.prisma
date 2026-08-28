@@ -72,6 +72,17 @@ enum PaymentMethod {
   OTRO
 }
 
+// Etapa del pipeline comercial de una cotización. Los detalles puntuales
+// (N° de OC, si falta un HES, etc.) van en Quote.notes como texto libre —
+// solo la etapa general queda como campo fijo, para poder filtrar/reportar.
+enum QuoteStage {
+  ENVIADA
+  EN_EVALUACION
+  OC_RECIBIDA
+  PAGADA
+  RECHAZADA
+}
+
 model BusinessLine {
   id       String    @id @default(cuid())
   name     String    @unique
@@ -131,6 +142,7 @@ model User {
   discardedCaptures     ExpenseCapture[]       @relation("ExpenseCaptureDiscardedBy")
   responsiblePendingTasks PendingTask[]        @relation("PendingTaskResponsible")
   createdPendingTasks     PendingTask[]        @relation("PendingTaskCreatedBy")
+  createdQuotes           Quote[]              @relation("QuoteCreatedBy")
 
   @@map("users")
 }
@@ -431,4 +443,29 @@ model LoanPayment {
   createdAt       DateTime     @default(now()) @map("created_at")
 
   @@map("loan_payments")
+}
+
+// Control de cotizaciones enviadas a clientes — réplica del Excel de control
+// que ya llevaban ("COTIZACIONES QROMA", y otros por cliente). clientName es
+// texto libre (igual que Lender.name) para no obligar a tener un Client
+// formal antes de poder registrar una cotización, y porque una empresa
+// cliente puede tener cotizaciones sin llegar nunca a ser un Project.
+model Quote {
+  id            String     @id @default(cuid())
+  clientName    String     @map("client_name")
+  contactName   String?    @map("contact_name")
+  // Código de la cotización tal como lo maneja la empresa (ej. "ISS-021-2026").
+  code          String
+  project       String
+  amountNoIgv   Decimal    @map("amount_no_igv") @db.Decimal(12, 2)
+  igvAmount     Decimal    @map("igv_amount") @db.Decimal(12, 2)
+  stage         QuoteStage @default(ENVIADA)
+  quoteDate     DateTime?  @map("quote_date")
+  notes         String?
+  createdByUserId String   @map("created_by_user_id")
+  createdByUser User       @relation("QuoteCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  @@map("quotes")
 }
