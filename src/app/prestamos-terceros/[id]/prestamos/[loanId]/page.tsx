@@ -39,11 +39,25 @@ export default async function PrestamoTerceroDetailPage({
   if (!loan || !loan.lender) notFound();
 
   const amount = Number(loan.amount);
+  // El interés y la comisión solo se suman al total a pagar cuando están en
+  // la misma moneda que el préstamo (si alguna vez quedan en otra moneda,
+  // por ejemplo de un préstamo viejo, se ignoran acá para no mezclar
+  // monedas distintas en una sola suma).
+  const interestInSameCurrency =
+    loan.interestAmount && loan.interestCurrency === loan.currency
+      ? Number(loan.interestAmount)
+      : 0;
+  const commissionInSameCurrency =
+    loan.bankCommission && loan.bankCommissionCurrency === loan.currency
+      ? Number(loan.bankCommission)
+      : 0;
+  const totalToPay = amount + interestInSameCurrency + commissionInSameCurrency;
+
   const paidInSameCurrency = loan.payments.filter(
     (p) => p.currency === loan.currency
   );
   const totalPaid = paidInSameCurrency.reduce((s, p) => s + Number(p.amount), 0);
-  const balance = amount - totalPaid;
+  const balance = totalToPay - totalPaid;
 
   const otherCurrencyPayments = loan.payments.filter(
     (p) => p.currency !== loan.currency
@@ -105,7 +119,11 @@ export default async function PrestamoTerceroDetailPage({
             value={loan.dueDate ? formatDate(loan.dueDate) : "—"}
           />
           <InfoCard
-            label="Interés"
+            label={
+              loan.interestRate
+                ? `Interés (${Number(loan.interestRate)}%)`
+                : "Interés"
+            }
             value={
               loan.interestAmount
                 ? formatAmount(Number(loan.interestAmount), loan.interestCurrency ?? "PEN")
@@ -126,10 +144,15 @@ export default async function PrestamoTerceroDetailPage({
           <h2 className="mb-4 text-sm font-semibold text-brand-navy">
             Control del préstamo
           </h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <MoneyStat
               label="Monto prestado"
               value={formatAmount(amount, loan.currency)}
+            />
+            <MoneyStat
+              label="Total a pagar"
+              value={formatAmount(totalToPay, loan.currency)}
+              highlight
             />
             <MoneyStat
               label="Total abonado"
@@ -142,6 +165,13 @@ export default async function PrestamoTerceroDetailPage({
               warn={balance > 0.01}
             />
           </div>
+          {(loan.interestAmount && loan.interestCurrency !== loan.currency) ||
+          (loan.bankCommission && loan.bankCommissionCurrency !== loan.currency) ? (
+            <p className="mt-3 text-xs text-brand-muted">
+              El interés y/o la comisión están en una moneda distinta al
+              monto prestado — no se sumaron al total a pagar de arriba.
+            </p>
+          ) : null}
           {loan.notes && (
             <p className="mt-4 border-t border-brand-border pt-4 text-sm text-brand-muted">
               {loan.notes}

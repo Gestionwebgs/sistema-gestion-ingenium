@@ -32,9 +32,16 @@ function parseLoanFields(formData: FormData) {
     String(formData.get("borrowerUserId") ?? "").trim() || null;
   const amount = Number(formData.get("amount") ?? 0) || 0;
   const currency = String(formData.get("currency") ?? "PEN") as "PEN" | "USD";
-  const interestAmountRaw = String(formData.get("interestAmount") ?? "").trim();
-  const interestAmount = interestAmountRaw ? Number(interestAmountRaw) : null;
-  const interestCurrency = interestAmountRaw
+  // La tasa manda: si se dio un porcentaje, el interés en monto se calcula
+  // acá (no se confía en el cálculo del cliente) a partir del monto
+  // prestado, para que "cuánto tengo que pagar" siempre cuadre con la tasa
+  // mostrada.
+  const interestRateRaw = String(formData.get("interestRate") ?? "").trim();
+  const interestRate = interestRateRaw ? Number(interestRateRaw) : null;
+  const interestAmount = interestRate
+    ? Math.round(amount * (interestRate / 100) * 100) / 100
+    : null;
+  const interestCurrency = interestRate
     ? (String(formData.get("interestCurrency") ?? "PEN") as "PEN" | "USD")
     : null;
   const bankCommissionRaw = String(formData.get("bankCommission") ?? "").trim();
@@ -55,6 +62,7 @@ function parseLoanFields(formData: FormData) {
     borrowerUserId,
     amount,
     currency,
+    interestRate,
     interestAmount,
     interestCurrency,
     bankCommission,

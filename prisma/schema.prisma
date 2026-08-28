@@ -390,6 +390,10 @@ model Loan {
   borrowerUser     User?         @relation("LoanBorrower", fields: [borrowerUserId], references: [id])
   amount           Decimal       @db.Decimal(12, 2)
   currency         LoanCurrency  @default(PEN)
+  // Si se conoce la tasa (ej. 15 = 15%), interestAmount se calcula solo a
+  // partir de esa tasa sobre `amount` y se guarda igual — así el resto del
+  // sistema (saldo pendiente, etc.) sigue usando un monto, no una tasa.
+  interestRate     Decimal?      @map("interest_rate") @db.Decimal(6, 3)
   interestAmount   Decimal?      @map("interest_amount") @db.Decimal(12, 2)
   interestCurrency LoanCurrency? @map("interest_currency")
   // Comisión que cobra el banco por la operación (aparte del interés) — ej. la

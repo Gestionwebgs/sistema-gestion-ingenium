@@ -37,7 +37,21 @@ export default async function PrestamosTercerosPage() {
         const paid = loan.payments
           .filter((p) => p.currency === loan.currency)
           .reduce((sum, p) => sum + Number(p.amount), 0);
-        const balance = Math.max(Number(loan.amount) - paid, 0);
+        // Mismo criterio que en la ficha del préstamo: el interés y la
+        // comisión solo suman al total a pagar si están en la misma moneda
+        // que el préstamo.
+        const interest =
+          loan.interestAmount && loan.interestCurrency === loan.currency
+            ? Number(loan.interestAmount)
+            : 0;
+        const commission =
+          loan.bankCommission && loan.bankCommissionCurrency === loan.currency
+            ? Number(loan.bankCommission)
+            : 0;
+        const balance = Math.max(
+          Number(loan.amount) + interest + commission - paid,
+          0
+        );
         if (balance > 0.01) {
           balanceByCurrency[loan.currency] =
             (balanceByCurrency[loan.currency] ?? 0) + balance;

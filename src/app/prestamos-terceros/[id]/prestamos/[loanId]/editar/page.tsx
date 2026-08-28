@@ -30,6 +30,17 @@ export default async function EditarPrestamoTerceroPage({
 
   const updateLoan = updateLoanAction.bind(null, lenderId, loan.id);
 
+  // Préstamos de antes de este cambio pueden tener un interestAmount fijo
+  // sin ninguna tasa guardada — se calcula la tasa equivalente para que el
+  // campo quede precargado y, de ahí en más, la tasa sea la fuente de verdad.
+  const amountNum = Number(loan.amount);
+  const impliedRate =
+    loan.interestRate != null
+      ? Number(loan.interestRate)
+      : loan.interestAmount && amountNum > 0
+        ? Math.round((Number(loan.interestAmount) / amountNum) * 100 * 1000) / 1000
+        : undefined;
+
   return (
     <AppShell
       userName={session.user.name ?? ""}
@@ -56,12 +67,10 @@ export default async function EditarPrestamoTerceroPage({
           submitLabel="Guardar cambios"
           defaults={{
             borrowerUserId: loan.borrowerUserId ?? "",
-            amount: Number(loan.amount),
+            amount: amountNum,
             currency: loan.currency,
-            interestAmount: loan.interestAmount ? Number(loan.interestAmount) : undefined,
-            interestCurrency: loan.interestCurrency ?? "PEN",
+            interestRate: impliedRate,
             bankCommission: loan.bankCommission ? Number(loan.bankCommission) : undefined,
-            bankCommissionCurrency: loan.bankCommissionCurrency ?? "PEN",
             loanDate: toDateInputValue(loan.loanDate),
             dueDate: toDateInputValue(loan.dueDate),
             notes: loan.notes ?? "",
