@@ -128,7 +128,7 @@ export default async function PrestamoTerceroDetailPage({
             value={loan.dueDate ? formatDate(loan.dueDate) : "—"}
           />
           <InfoCard
-            label="Tasa de interés calculada"
+            label="Porcentaje calculado"
             value={impliedRate != null ? `${impliedRate}%` : "—"}
           />
           <InfoCard
