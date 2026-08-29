@@ -1,0 +1,20 @@
+# Configuración de Caddy para el servidor de producción.
+#
+# MIENTRAS NO HAYA DOMINIO: se usa el bloque ":80" de abajo, que sirve la
+# app por HTTP directo en la IP del servidor (sin HTTPS todavía, porque
+# Let's Encrypt no puede emitir un certificado para una IP, solo para un
+# dominio).
+#
+# CUANDO YA TENGAS EL DOMINIO: comentá (o borrá) el bloque ":80" y
+# descomentá el bloque de abajo con tu dominio real. Caddy va a pedir y
+# renovar el certificado HTTPS solo, sin que haya que hacer nada más.
+# Después de cambiar este archivo, en el servidor corré:
+#   docker compose -f docker-compose.prod.yml restart caddy
+
+:80 {
+	reverse_proxy host.docker.internal:3005
+}
+
+# tudominio.com {
+# 	reverse_proxy host.docker.internal:3005
+# }

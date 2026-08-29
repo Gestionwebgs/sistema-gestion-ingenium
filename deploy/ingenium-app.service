@@ -1,0 +1,19 @@
+[Unit]
+Description=Sistema de Gestion Ingenium (Next.js)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/ingenium/sistema-gestion-ingenium
+# Next.js lee el .env de esta misma carpeta solo, no hace falta duplicarlo
+# acá con EnvironmentFile.
+ExecStart=/usr/bin/npm run start -- -p 3005
+Restart=always
+RestartSec=5
+
+# Si el servidor entero se reinicia (por ejemplo, tras aplicar
+# actualizaciones de seguridad automáticas), la app vuelve a arrancar sola.
+[Install]
+WantedBy=multi-user.target

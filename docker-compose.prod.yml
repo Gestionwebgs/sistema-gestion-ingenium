@@ -1,0 +1,51 @@
+# Docker Compose para el SERVIDOR de producción (EC2). Distinto del
+# docker-compose.yml de desarrollo local:
+#   - No hay MinIO: en producción los comprobantes van a un bucket S3 real
+#     (ver infra/main.tf), así que ese contenedor no hace falta.
+#   - Postgres solo escucha en localhost (127.0.0.1), nunca en 0.0.0.0 —
+#     nadie fuera del propio servidor puede llegar a la base de datos, ni
+#     siquiera si el firewall de AWS fallara.
+#   - Se agrega Caddy como reverse proxy: la app Next.js corre nativa en el
+#     servidor (systemd, ver deploy/ingenium-app.service), Caddy la expone
+#     en el puerto 80/443 y se encarga solo del certificado HTTPS apenas
+#     haya un dominio (ver Caddyfile).
+#
+# Uso: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ingenium
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ingenium
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ingenium"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    extra_hosts:
+      # Permite que Caddy (adentro de Docker) llegue a la app Next.js, que
+      # corre directo en el servidor (no en un contenedor) vía systemd.
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

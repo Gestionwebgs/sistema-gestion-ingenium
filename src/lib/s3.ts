@@ -10,14 +10,26 @@ import { randomUUID } from "crypto";
 
 const bucket = process.env.S3_BUCKET!;
 
+// En local (MinIO) usamos access key/secret fijos por variable de entorno.
+// En el servidor de producción (EC2) NO seteamos S3_ACCESS_KEY_ID/SECRET —
+// dejamos que el SDK de AWS tome las credenciales automáticamente del rol
+// IAM de la instancia (más seguro: nada de claves de larga duración
+// guardadas en el .env del servidor, y AWS las rota solo). Por eso las
+// credenciales explícitas son opcionales: si no están seteadas, el
+// S3Client cae solo al "default credential provider chain".
+const explicitCredentials =
+  process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
+    ? {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+      }
+    : undefined;
+
 export const s3 = new S3Client({
   endpoint: process.env.S3_ENDPOINT,
   region: process.env.S3_REGION,
   forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
-  },
+  ...(explicitCredentials ? { credentials: explicitCredentials } : {}),
 });
 
 // En una instalación nueva (MinIO local recién levantado, o una cuenta AWS

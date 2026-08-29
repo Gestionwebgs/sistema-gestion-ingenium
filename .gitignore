@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.production.example
 
 # vercel
 .vercel
@@ -52,3 +53,13 @@ skills-lock.json
 
 # tesseract.js OCR language data cache (downloaded on demand, not source)
 *.traineddata
+
+# terraform (infra/) — el estado y las variables reales tienen datos
+# sensibles (ej. la contraseña de Postgres, tu IP) y no se suben al repo.
+# El archivo .terraform.lock.hcl SI se sube (fija las versiones de los
+# providers), no está listado acá a propósito.
+infra/.terraform/
+infra/terraform.tfstate
+infra/terraform.tfstate.*
+infra/terraform.tfvars
+infra/*.tfplan

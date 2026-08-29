@@ -1,0 +1,19 @@
+# Copiá este archivo a "terraform.tfvars" (sin ".example") y completá tus
+# datos reales. terraform.tfvars NO se sube a git (ya está en .gitignore).
+
+# Tu IP pública actual, en formato CIDR con /32. Mirala en
+# https://checkip.amazonaws.com desde la compu donde vas a hacer SSH.
+# Ejemplo: "181.65.12.34/32"
+ssh_allowed_cidr = "TU_IP_AQUI/32"
+
+# Ruta a tu clave pública SSH. Generala antes con:
+#   ssh-keygen -t ed25519 -f ~/.ssh/ingenium_aws_ed25519 -C "gerson-aws"
+# (dejá la passphrase vacía o no, como prefieras)
+ssh_public_key_path = "~/.ssh/ingenium_aws_ed25519.pub"
+
+# Opcional: tu correo para recibir alertas si el servidor se queda corto de
+# memoria o disco. Dejalo como "" si no querés esto todavía.
+alert_email = ""
+
+# Opcional: dejalo vacío mientras no tengas el dominio.
+domain_name = ""
