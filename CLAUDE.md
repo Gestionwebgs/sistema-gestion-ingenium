@@ -233,7 +233,7 @@ Los hallazgos 1-3 fueron resueltos en sesiones posteriores (ambas computadoras).
 - ~~**Despliegue a un servidor real**~~ — **construido (2026-08-29)**: se armó con Terraform + una sola instancia EC2 (no RDS ni App Runner, se simplificó a pedido del usuario: "todo desde ahí"). Ver `docs/DESPLIEGUE_AWS.md` para la guía completa paso a paso y la sección nueva más abajo para el resumen de arquitectura. Pendiente: que el usuario efectivamente corra `terraform apply` y el primer despliegue — el código y la documentación ya están listos, pero no hay confirmación todavía de que el servidor esté arriba.
 - **App móvil / PWA**: el usuario preguntó si es posible, quedó pendiente sin fecha ("lo dejamos pendiente").
 - ~~**Capturas de pantalla para la página web profesional**~~ — **resuelto**, el usuario ya las tiene.
-- **Dominio para el servidor de AWS**: todavía no lo tiene. Cuando lo consiga, avisar y seguir "Cuando tengas el dominio" en `docs/DESPLIEGUE_AWS.md` (apuntar el DNS a `18.209.97.100`, completar `domain_name` en `infra/terraform.tfvars`, cambiar el `Caddyfile`). Ver también "Referencia rápida" más abajo para reconectarse al servidor.
+- ~~**Dominio para el servidor de AWS**~~ — **resuelto (2026-09-05)**: `gestion.ingeniumservicesac.com` está configurado. Registro A creado en GoDaddy (`gestion` → `18.209.97.100`), `Caddyfile` actualizado y Caddy ya obtuvo el certificado HTTPS de Let's Encrypt (se renueva solo). La app se accede en `https://gestion.ingeniumservicesac.com`. Ver "Referencia rápida" más abajo para el detalle.
 - **Aumento de cuota de AWS pendiente de aprobación**: se pidió en Service Quotas subir "Running On-Demand Standard... instances" para poder pasar de `t3.micro` (capa gratuita, donde está ahora en producción) a `t3.medium`. Revisar el estado en la consola quota → cuando se apruebe, sacar la línea `instance_type = "t3.micro"` de `infra/terraform.tfvars` y correr `terraform apply` (redimensiona in-place, no se pierde nada).
 - ~~**BUG: en "Mis facturas pendientes" (`/capturas`) se podía confirmar una factura sin elegir proyecto y quedaba "perdida" como gasto general.**~~ — **resuelto 2026-08-27**, ver sección más abajo.
 
@@ -277,6 +277,11 @@ IAM si no se tienen a mano).
 - Bucket S3 de comprobantes: `ingenium-comprobantes-166390306910`
 - Instancia actual: `t3.micro` (capa gratuita, pendiente subir a
   `t3.medium` — ver pendiente arriba)
+- Dominio: `gestion.ingeniumservicesac.com` (DNS en GoDaddy, cuenta
+  "INGENIUM A&R SAC" — registro A apuntando a la IP elástica de arriba).
+  HTTPS lo maneja Caddy solo (Let's Encrypt, renovación automática). Si el
+  día de mañana cambia la IP del servidor (no debería, es elástica), hay
+  que actualizar ese registro A en GoDaddy (no hace falta tocar nada más en AWS).
 - La contraseña de Postgres y el `AUTH_SECRET` de producción NO están en
   ningún lado del repo (a propósito) — la de Postgres se recupera con
   `terraform output -raw db_password` desde `infra/`, si hiciera falta
