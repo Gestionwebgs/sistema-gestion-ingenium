@@ -6,6 +6,48 @@ crecer más adelante. Está escrita para correrse una sola vez (la primera
 instalación); las actualizaciones de código después de esto son mucho más
 cortas (ver "Actualizar la app" al final).
 
+## Nota: arrancamos en capa gratuita, no en t3.medium
+
+La cuenta de AWS es nueva, y por defecto AWS limita a las cuentas nuevas a
+0 vCPUs de instancias "fuera de capa gratuita" (una medida antifraude
+estándar) hasta aprobar un aumento de cuota. Por eso, aunque la decisión
+original fue `t3.medium`, el **primer despliegue real usa `t3.micro`**
+(capa gratuita, 1GB de RAM) mientras se aprueba la cuota — ver
+`infra/terraform.tfvars`, línea `instance_type = "t3.micro"`.
+
+**Cómo pedir el aumento de cuota** (para poder subir a t3.medium después):
+Consola de AWS → **Service Quotas** → **AWS services** → **EC2** → cuota
+**"Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances"** →
+**Request increase at account-level** → pedí, por ejemplo, **8** vCPUs.
+Suele aprobarse solo en minutos; en cuentas muy nuevas puede tardar hasta
+24-48hs.
+
+**Cuando se apruebe**: en `infra/terraform.tfvars`, borrá o comentá la
+línea `instance_type = "t3.micro"` (vuelve al default `t3.medium` de
+`infra/variables.tf`) y corré `terraform apply` de nuevo. Terraform
+redimensiona la instancia existente (la apaga, cambia el tamaño, la prende)
+— **no se pierde nada del disco ni de la base de datos**, es la misma
+instancia y el mismo volumen EBS todo el tiempo.
+
+**Cuidados extra mientras estemos en 1GB de RAM** (para que no se cuelgue,
+que era la preocupación original): se ajustó el despliegue especialmente
+para esto:
+- El swap del servidor se subió a 4GB (4 veces la RAM real) en vez del
+  tamaño normal — le da al sistema un colchón grande para no matar
+  procesos por falta de memoria, a costa de que todo vaya más lento cuando
+  lo usa.
+- `deploy/deploy.sh` limita el build de Next.js a un techo de memoria
+  (`NODE_OPTIONS=--max-old-space-size=768`) para que Node no intente acaparar
+  toda la RAM disponible y deje lugar a Postgres/Docker.
+- `docker-compose.prod.yml` le pone un techo de memoria a Postgres (300MB)
+  y a Caddy (100MB), para asegurar que siempre quede RAM disponible para la
+  app, que es la que más necesita durante el build.
+- **Esperá que el build tarde bastante más que en tu computadora** (puede
+  ser varios minutos, contra los ~10-90 segundos que vimos en las otras
+  máquinas) — es normal, está usando swap. Si `./deploy/deploy.sh` parece
+  "colgado" en el paso de `npm run build`, dale tiempo antes de asumir que
+  falló.
+
 ## Arquitectura elegida y por qué
 
 Todo corre en **una sola instancia EC2** (t3.medium: 2 vCPU / 4GB RAM),
@@ -248,6 +290,37 @@ para esto.
 diario comprimido subido al mismo bucket S3, como segunda capa de respaldo
 más liviana y rápida de restaurar que un snapshot completo del disco. Queda
 anotado como mejora futura, no incluido en esta primera versión.
+
+## Problemas encontrados en el primer despliegue real (y cómo se resolvieron)
+
+Por si se repite alguno al recrear el servidor desde cero:
+
+- **`npm ci` falla con "can only install packages when... are in sync"**: el
+  `package-lock.json` se generó en Windows y le faltaban entradas de
+  paquetes opcionales nativos de Linux (de `sharp`). Se resolvió usando
+  `npm install` en vez de `npm ci` — ya está así en `deploy/deploy.sh`, no
+  hace falta hacer nada a mano la próxima vez.
+- **`P1000: Authentication failed` al correr `prisma migrate deploy`**: la
+  contraseña de `DATABASE_URL` y la de `POSTGRES_PASSWORD` en el `.env` no
+  coincidían (se completaron a mano y quedó un desfasaje). Postgres solo fija
+  la contraseña la PRIMERA vez que arranca con el volumen vacío — si esto
+  pasa, hay que bajar el contenedor, **borrar el volumen**
+  (`docker volume rm sistema-gestion-ingenium_postgres_data`, seguro
+  mientras no haya datos reales todavía) y levantarlo de nuevo con las dos
+  contraseñas ya coincidiendo. Para evitarlo: copiar el valor de
+  `terraform output -raw db_password` una sola vez y pegarlo igual en los
+  dos lugares del `.env`, sin retipearlo.
+- **Caddy responde "502 Bad Gateway" aunque la app esté corriendo bien**:
+  `ufw` bloquea por defecto el tráfico interno de Docker hacia el puerto
+  3005 del servidor (solo se permite 22/80/443 explícitamente). Ya
+  resuelto de forma automática: `deploy/deploy.sh` calcula la subred de la
+  red de Docker del proyecto y agrega el permiso de `ufw` solo para esa
+  subred y ese puerto — no hace falta ningún paso manual.
+- **`npx auth secret` da una variable `BETTER_AUTH_SECRET` en vez de
+  `AUTH_SECRET`**: ese paquete de npm cambió de dueño/propósito (es de otra
+  librería, "Better Auth", no la que usa este proyecto). Para generar el
+  secreto de Auth.js a mano: `openssl rand -base64 32`, y ponerlo en
+  `AUTH_SECRET` del `.env`.
 
 ## Notas para el futuro / limitaciones conocidas
 

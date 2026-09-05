@@ -5,6 +5,16 @@
 # build, reiniciar), adaptado a este servidor. Ver docs/DESPLIEGUE_AWS.md.
 set -euo pipefail
 
+# Si el servidor tiene poca RAM (empezamos en capa gratuita, t3.micro =
+# 1GB), le ponemos un techo a la memoria que Node puede usar durante el
+# build. Sin esto, Node intenta usar toda la RAM que "cree" disponible
+# (calculado sobre el total del sistema) y puede terminar peleando con
+# Postgres/Docker en vez de usar el swap con margen — mejor que compile un
+# poco más lento (usando swap) a que se cuelgue. No hace falta tocar esto
+# cuando se suba a una instancia con más RAM: 768MB de techo sigue andando
+# bien igual, solo que sobra más margen.
+export NODE_OPTIONS="--max-old-space-size=768"
+
 REPO_DIR="/opt/ingenium/sistema-gestion-ingenium"
 REPO_URL="https://github.com/Gestionwebgs/sistema-gestion-ingenium.git"
 
@@ -34,13 +44,28 @@ fi
 echo "==> Levantando Postgres y Caddy..."
 docker compose -f docker-compose.prod.yml up -d
 
+echo "==> Permitiendo que Caddy (Docker) llegue a la app en el puerto 3005 del servidor..."
+# Por defecto ufw bloquea esto (solo dejamos pasar 22/80/443) — sin este
+# permiso puntual, Caddy devuelve "502 Bad Gateway" aunque la app esté bien
+# arriba. Se calcula la subred de la red de Docker de este proyecto en vez
+# de asumir un valor fijo, porque Docker no siempre asigna la misma. Es
+# idempotente: si ya existe el permiso, ufw no lo duplica.
+DOCKER_SUBNET=$(docker network inspect sistema-gestion-ingenium_default --format '{{(index .IPAM.Config 0).Subnet}}')
+if [ -n "$DOCKER_SUBNET" ] && ! sudo ufw status | grep -q "$DOCKER_SUBNET.*3005"; then
+  sudo ufw allow from "$DOCKER_SUBNET" to any port 3005 proto tcp
+fi
+
 echo "==> Esperando que Postgres esté listo..."
 until docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U ingenium > /dev/null 2>&1; do
   sleep 2
 done
 
 echo "==> Instalando dependencias..."
-npm ci
+# npm ci exige que el lock file sea idéntico byte a byte a lo que instala,
+# y a veces trae diferencias entre Windows (donde se genera) y Linux (donde
+# se instala acá) por paquetes opcionales nativos (ej. sharp). npm install
+# se auto-corrige en esos casos sin problema.
+npm install
 
 echo "==> Aplicando migraciones de Prisma..."
 npx prisma migrate deploy

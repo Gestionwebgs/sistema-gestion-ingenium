@@ -17,3 +17,14 @@ alert_email = ""
 
 # Opcional: dejalo vacío mientras no tengas el dominio.
 domain_name = ""
+
+# TEMPORAL: la cuenta de AWS es nueva y todavía no tiene aprobada la cuota
+# para instancias fuera de la capa gratuita (t3.medium da error
+# "not eligible for Free Tier" hasta que AWS apruebe el aumento de cuota,
+# ver docs/DESPLIEGUE_AWS.md). Mientras tanto arrancamos en capa gratuita:
+instance_type = "t3.micro"
+# Cuando AWS apruebe la cuota, comentá o borrá esta línea (vuelve al
+# default de infra/variables.tf, que es "t3.medium") y corré
+# "terraform apply" de nuevo — Terraform solo redimensiona la instancia
+# existente (para, cambia el tamaño, prende), no se pierden los datos del
+# disco.

@@ -233,6 +233,53 @@ Los hallazgos 1-3 fueron resueltos en sesiones posteriores (ambas computadoras).
 - ~~**Despliegue a un servidor real**~~ — **construido (2026-08-29)**: se armó con Terraform + una sola instancia EC2 (no RDS ni App Runner, se simplificó a pedido del usuario: "todo desde ahí"). Ver `docs/DESPLIEGUE_AWS.md` para la guía completa paso a paso y la sección nueva más abajo para el resumen de arquitectura. Pendiente: que el usuario efectivamente corra `terraform apply` y el primer despliegue — el código y la documentación ya están listos, pero no hay confirmación todavía de que el servidor esté arriba.
 - **App móvil / PWA**: el usuario preguntó si es posible, quedó pendiente sin fecha ("lo dejamos pendiente").
 - ~~**Capturas de pantalla para la página web profesional**~~ — **resuelto**, el usuario ya las tiene.
+- **Dominio para el servidor de AWS**: todavía no lo tiene. Cuando lo consiga, avisar y seguir "Cuando tengas el dominio" en `docs/DESPLIEGUE_AWS.md` (apuntar el DNS a `18.209.97.100`, completar `domain_name` en `infra/terraform.tfvars`, cambiar el `Caddyfile`). Ver también "Referencia rápida" más abajo para reconectarse al servidor.
+- **Aumento de cuota de AWS pendiente de aprobación**: se pidió en Service Quotas subir "Running On-Demand Standard... instances" para poder pasar de `t3.micro` (capa gratuita, donde está ahora en producción) a `t3.medium`. Revisar el estado en la consola quota → cuando se apruebe, sacar la línea `instance_type = "t3.micro"` de `infra/terraform.tfvars` y correr `terraform apply` (redimensiona in-place, no se pierde nada).
+
+## Referencia rápida: reconectarse al servidor / Terraform / AWS (2026-08-29)
+
+Para no tener que volver a buscar todo esto la próxima vez que haya que
+desplegar un cambio o tocar la infraestructura:
+
+**Conectarse por SSH al servidor:**
+```
+ssh -i ~/.ssh/ingenium_aws_ed25519 ubuntu@18.209.97.100
+```
+(la IP es fija — IP elástica de AWS — no cambia aunque se reinicie el
+servidor. Si en algún momento no se sabe la IP actual, correr
+`terraform output ip_publica` desde `infra/`.)
+
+**Desplegar un cambio nuevo de código en el servidor** (una vez conectado
+por SSH):
+```
+cd /opt/ingenium/sistema-gestion-ingenium
+./deploy/deploy.sh
+```
+
+**Tocar la infraestructura (Terraform)**, desde la computadora de Windows
+(no desde el servidor):
+```
+cd sistema-gestion-ingenium/infra
+terraform plan
+terraform apply
+```
+AWS CLI ya está configurado en esa computadora (`aws configure`, usuario
+IAM `admin-gerson`, región `us-east-1`) — no hace falta volver a
+configurarlo salvo que se use OTRA computadora, ahí sí habría que repetir
+`aws configure` con las mismas access keys (o generar unas nuevas desde
+IAM si no se tienen a mano).
+
+**Datos de referencia de esta cuenta/servidor:**
+- Account ID de AWS: `166390306910`
+- Usuario IAM administrador: `admin-gerson`
+- Región: `us-east-1`
+- Bucket S3 de comprobantes: `ingenium-comprobantes-166390306910`
+- Instancia actual: `t3.micro` (capa gratuita, pendiente subir a
+  `t3.medium` — ver pendiente arriba)
+- La contraseña de Postgres y el `AUTH_SECRET` de producción NO están en
+  ningún lado del repo (a propósito) — la de Postgres se recupera con
+  `terraform output -raw db_password` desde `infra/`, si hiciera falta
+  volver a verla.
 - **BUG anotado (2026-08-27, no corregir todavía): en "Mis facturas pendientes" (`/capturas`) se puede confirmar una factura sin elegir proyecto y queda "perdida" como gasto general.** El `<select name="projectId">` en `src/app/capturas/page.tsx` tiene como primera opción "Sin proyecto (general)" con `defaultValue=""`, o sea que ese valor cuenta como una elección válida — no hay ninguna opción neutra tipo "-- elegir proyecto --" que fuerce al usuario a decidir. Si le da a "Confirmar gasto" sin tocar el selector, `classifyCaptureAction` (`src/app/capturas/actions.ts`, línea ~99: `const projectId = String(formData.get("projectId") ?? "").trim() || null`) recibe `projectId: null` sin ningún error y crea el gasto como general. El usuario reportó el síntoma: "la subo y no sé a cuál proyecto se cargó" — en realidad no se cargó a ningún proyecto, quedó como gasto general (visible en `/gastos`, no en el proyecto esperado). **Corrección pendiente sugerida**: agregar una opción placeholder deshabilitada tipo `<option value="" disabled>Elegí un proyecto...</option>` y mover "Sin proyecto (general)" a un valor explícito distinto de `""` (ej. `"GENERAL"`), para que el usuario tenga que elegir a propósito en vez de que el default silencioso decida por él.
 
 ## Comprobantes al registrar/editar un gasto a mano + descarga mensual para contadores (2026-08-20)
@@ -311,6 +358,47 @@ con poca RAM (pasó antes con 2GB). Guía completa, con cada comando, en
   primer despliegue — el código, la documentación (`docs/DESPLIEGUE_AWS.md`)
   y el ajuste de `s3.ts` están listos y committeados, pero el servidor en sí
   no existe todavía. Retomar desde "Antes de empezar" en esa guía.
+- **Actualización (2026-08-29, mismo día)**: al correr `terraform apply` por
+  primera vez, AWS rechazó crear la instancia `t3.medium` con
+  `InvalidParameterCombination: not eligible for Free Tier` — las cuentas
+  nuevas de AWS arrancan con la cuota de vCPUs "fuera de capa gratuita" en 0,
+  hay que pedir un aumento en Service Quotas (EC2 → "Running On-Demand
+  Standard... instances", instrucciones en `docs/DESPLIEGUE_AWS.md`) y
+  puede tardar. El resto de los recursos (S3, IAM, security group, DLM,
+  key pair) SÍ se crearon bien. Decisión del usuario mientras se aprueba la
+  cuota: **desplegar ya en capa gratuita (`t3.micro`, 1GB RAM)** y escalar a
+  `t3.medium` después con solo cambiar `instance_type` en
+  `infra/terraform.tfvars` y reaplicar (Terraform redimensiona la instancia
+  existente in-place, no se pierde el disco). Pidió explícitamente cuidar
+  que no colapse con tan poca RAM, así que se sumaron mitigaciones: swap
+  subido a 4GB en `infra/user_data.sh`, techo de memoria del build de
+  Next.js (`NODE_OPTIONS=--max-old-space-size=768` en `deploy/deploy.sh`), y
+  límites de memoria a Postgres (300MB) y Caddy (100MB) en
+  `docker-compose.prod.yml` para no competir con la app por RAM. El build va
+  a ser bastante más lento que en las otras computadoras mientras se esté en
+  esta instancia (usa swap) — es esperado, no es una falla.
+- **Despliegue completado y confirmado funcionando (2026-08-29)**: el
+  usuario ya entró al sistema real en `http://18.209.97.100` (IP fija del
+  servidor, sin dominio todavía) con el usuario owner de producción
+  (`proyectos@ingeniumservicesac.com`). La base de datos de este servidor
+  arranca vacía a propósito (no se migraron los datos de las otras dos
+  computadoras — si el usuario pide eso, es un paso aparte: pg_dump +
+  restore). En el camino aparecieron 4 problemas puntuales, todos resueltos
+  y documentados con el detalle técnico en "Problemas encontrados en el
+  primer despliegue real" dentro de `docs/DESPLIEGUE_AWS.md` — resumen:
+  `npm ci` fallaba por diferencias Windows/Linux en `package-lock.json`
+  (cambiado a `npm install` en `deploy/deploy.sh`), la contraseña de
+  Postgres quedó desincronizada entre `DATABASE_URL` y `POSTGRES_PASSWORD`
+  al completar el `.env` a mano (hubo que recrear el volumen de Postgres),
+  Caddy daba `502` porque `ufw` bloqueaba el tráfico interno de Docker hacia
+  el puerto 3005 (ahora `deploy/deploy.sh` agrega ese permiso solo,
+  detectando la subred real de Docker), y `npx auth secret` resultó ser de
+  otra librería distinta a la que usa este proyecto (usar
+  `openssl rand -base64 32` en su lugar). **Pendiente real que queda**: el
+  usuario todavía tiene que pedir el aumento de cuota de AWS (Service
+  Quotas → EC2 → "Running On-Demand Standard...") para poder subir de
+  `t3.micro` a `t3.medium` — mientras tanto el sistema real ya está en
+  producción funcionando en capa gratuita.
 
 ## Préstamos de personal: saldo pendiente y abonos por persona (2026-08-22)
 

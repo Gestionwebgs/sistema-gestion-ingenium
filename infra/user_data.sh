@@ -31,9 +31,16 @@ usermod -aG docker ubuntu
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt-get install -y nodejs
 
-## 4) Swap de 2GB — colchon extra ademas de los 4GB de RAM reales ----------
+## 4) Swap — colchon extra para no colgarse por falta de RAM ----------------
+## Este servidor arranca en capa gratuita (t3.micro, 1GB de RAM real) hasta
+## que AWS apruebe subir la cuota de vCPUs de la cuenta (ver
+## docs/DESPLIEGUE_AWS.md). Con tan poca RAM, el build de Next.js en
+## particular puede necesitar mas memoria de la que hay libre — por eso acá
+## el swap es generoso (4GB, 4 veces la RAM real) en vez del tamaño normal.
+## Cuando se suba a t3.medium (4GB de RAM) más adelante, este mismo swap de
+## 4GB sigue sirviendo perfecto como colchón, no hace falta tocarlo.
 if [ ! -f /swapfile ]; then
-  fallocate -l 2G /swapfile
+  fallocate -l 4G /swapfile
   chmod 600 /swapfile
   mkswap /swapfile
   swapon /swapfile

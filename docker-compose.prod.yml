@@ -16,6 +16,11 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: always
+    # Techo de memoria: en el servidor de capa gratuita (1GB de RAM total)
+    # esto asegura que Postgres nunca le saque toda la RAM a la app Next.js,
+    # que es la que más necesita durante el build. 300MB es de sobra para el
+    # tamaño de base de datos que maneja este sistema.
+    mem_limit: 300m
     environment:
       POSTGRES_USER: ingenium
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -33,6 +38,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: always
+    mem_limit: 100m
     ports:
       - "80:80"
       - "443:443"
