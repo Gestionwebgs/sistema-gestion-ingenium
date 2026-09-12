@@ -223,6 +223,21 @@ resource "aws_instance" "app" {
   tags = {
     Name = "${var.project_name}-app"
   }
+
+  # IMPORTANTE (2026-09-12): data.aws_ami.ubuntu busca "la version mas
+  # reciente" de Ubuntu 24.04. Sin este lifecycle, cualquier "terraform
+  # apply" futuro (incluso uno que solo toque el Security Group o una
+  # variable sin relacion) puede resolver una AMI distinta a la que se uso
+  # para crear esta instancia y forzar su reemplazo completo — es decir,
+  # BORRA el servidor entero (disco, base de datos, todo) y crea uno nuevo
+  # vacio. Esto ya paso una vez y se recupero desde un snapshot de DLM por
+  # suerte disponible. Con "ignore_changes" Terraform sigue usando la AMI
+  # mas reciente para una instancia NUEVA (si esta se destruyera a
+  # proposito), pero nunca vuelve a reemplazar esta instancia solo porque
+  # AWS publico una imagen mas nueva.
+  lifecycle {
+    ignore_changes = [ami]
+  }
 }
 
 resource "aws_eip" "app" {
