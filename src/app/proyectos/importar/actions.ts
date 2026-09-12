@@ -135,6 +135,19 @@ function parseProjectSheet(worksheet: ExcelJS.Worksheet): ParsedProjectSheet | n
     });
   });
 
+  // Etiquetas de fila-resumen que suelen ir pegadas justo debajo del último
+  // gasto/abono real, sin ninguna fila vacía de por medio (ver "Ejemplo real
+  // de estructura de datos" en CLAUDE.md: "Al final: total gastos, total
+  // abonos, saldo positivo, gastos, ganancia, pendiente por cobrar"). Sin
+  // este corte, esa fila se leía como un gasto/abono más, con el monto total
+  // de la columna como si fuera un solo movimiento adicional.
+  const SUMMARY_ROW_PREFIXES = ["TOTAL", "SALDO", "GANANCIA", "PENDIENTE"];
+
+  function isSummaryRow(description: string): boolean {
+    const upper = description.toUpperCase();
+    return SUMMARY_ROW_PREFIXES.some((prefix) => upper.startsWith(prefix));
+  }
+
   function readTable(headerRow: number | null, col: number): ParsedRow[] {
     if (!headerRow) return [];
     const rows: ParsedRow[] = [];
@@ -147,6 +160,7 @@ function parseProjectSheet(worksheet: ExcelJS.Worksheet): ParsedProjectSheet | n
       const amountCell = row.getCell(col + 4);
       const description = cellText(descCell);
       const amount = cellNumber(amountCell);
+      if (isSummaryRow(description)) break;
       if (!description && amount === 0) {
         emptyStreak++;
       } else {
