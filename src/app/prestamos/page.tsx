@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
@@ -120,12 +121,21 @@ export default async function PrestamosPage() {
       activeNav="prestamos"
     >
       <div className="p-4 sm:p-8">
-        <header className="mb-6">
-          <h1 className="text-xl font-bold text-brand-navy">Préstamos</h1>
-          <p className="text-sm text-brand-muted">
-            Gastos pagados con dinero propio del equipo, pendientes de
-            devolver.
-          </p>
+        <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-brand-navy">Préstamos</h1>
+            <p className="text-sm text-brand-muted">
+              Gastos pagados con dinero propio del equipo, pendientes de
+              devolver.
+            </p>
+          </div>
+          <a
+            href="/prestamos/nuevo"
+            className="flex items-center justify-center gap-2 rounded-md bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2} />
+            Nuevo préstamo personal
+          </a>
         </header>
 
         <div className="space-y-4">
