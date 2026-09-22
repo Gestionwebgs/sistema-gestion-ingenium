@@ -2,9 +2,12 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { cycleTaskStatusAction } from "./actions";
 import { ResponsableFilter } from "./ResponsableFilter";
+import { StatusFilter } from "./StatusFilter";
+
+const VALID_STATUSES = new Set(["PENDIENTE", "EN_CURSO", "CERRADO"]);
 
 const formatDate = (date: Date) =>
   new Date(date).toLocaleDateString("es-PE", { timeZone: "UTC" });
@@ -44,9 +47,9 @@ function groupBySection(tasks: Task[]) {
 export default async function PendientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ responsable?: string }>;
+  searchParams: Promise<{ responsable?: string; estado?: string }>;
 }) {
-  const { responsable } = await searchParams;
+  const { responsable, estado } = await searchParams;
   const session = await auth();
   if (session?.user.role !== "OWNER") redirect("/proyectos");
 
@@ -60,7 +63,14 @@ export default async function PendientesPage({
     .filter((name): name is string => !!name)
     .sort((a, b) => a.localeCompare(b));
 
-  const filter = responsable ? { responsibleName: responsable } : {};
+  const statusFilter =
+    estado && VALID_STATUSES.has(estado)
+      ? { status: estado as "PENDIENTE" | "EN_CURSO" | "CERRADO" }
+      : {};
+  const filter = {
+    ...(responsable ? { responsibleName: responsable } : {}),
+    ...statusFilter,
+  };
 
   const [proyectosTasks, internaTasks] = await Promise.all([
     prisma.pendingTask.findMany({
@@ -75,8 +85,16 @@ export default async function PendientesPage({
 
   const proyectosGroups = groupBySection(proyectosTasks);
   const internaGroups = groupBySection(internaTasks);
+  const hasActiveFilter = !!responsable || !!estado;
   const noResultsForFilter =
-    !!responsable && proyectosGroups.length === 0 && internaGroups.length === 0;
+    hasActiveFilter && proyectosGroups.length === 0 && internaGroups.length === 0;
+
+  const exportParams = new URLSearchParams();
+  if (responsable) exportParams.set("responsable", responsable);
+  if (estado) exportParams.set("estado", estado);
+  const exportHref = `/api/pendientes/export${
+    exportParams.toString() ? `?${exportParams.toString()}` : ""
+  }`;
 
   return (
     <AppShell
@@ -95,6 +113,19 @@ export default async function PendientesPage({
           </div>
           <div className="flex flex-wrap gap-2">
             <ResponsableFilter options={responsableOptions} />
+            <StatusFilter />
+            <a
+              href={exportHref}
+              className="flex items-center justify-center gap-2 rounded-md border border-brand-border px-4 py-2 text-sm font-medium text-brand-navy transition hover:bg-gray-50"
+              title={
+                hasActiveFilter
+                  ? "Descarga en Excel solo los pendientes que ves filtrados"
+                  : "Descarga en Excel todos los pendientes"
+              }
+            >
+              <Download className="h-4 w-4" strokeWidth={2} />
+              Descargar
+            </a>
             <a
               href="/pendientes/importar"
               className="flex items-center justify-center gap-2 rounded-md border border-brand-border px-4 py-2 text-sm font-medium text-brand-navy transition hover:bg-gray-50"
@@ -113,7 +144,9 @@ export default async function PendientesPage({
 
         {noResultsForFilter && (
           <div className="mb-6 rounded-lg border border-dashed border-brand-border bg-brand-surface py-8 text-center text-sm text-brand-muted">
-            No hay pendientes para &quot;{responsable}&quot;.
+            No hay pendientes
+            {responsable ? ` de "${responsable}"` : ""}
+            {estado ? ` con estado "${STATUS_LABELS[estado]}"` : ""}.
           </div>
         )}
 
