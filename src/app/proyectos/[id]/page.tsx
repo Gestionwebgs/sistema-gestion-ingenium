@@ -173,7 +173,7 @@ export default async function ProyectoDetailPage({
             <h2 className="mb-3 text-sm font-semibold text-brand-navy">
               Registro de gastos
             </h2>
-            <div className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface">
+            <div className="overflow-x-auto rounded-lg border border-brand-border bg-brand-surface">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-left text-xs uppercase text-brand-muted">
                   <tr>
@@ -338,13 +338,14 @@ export default async function ProyectoDetailPage({
             <h2 className="mb-3 text-sm font-semibold text-brand-navy">
               Registro de abonos
             </h2>
-            <div className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface">
+            <div className="overflow-x-auto rounded-lg border border-brand-border bg-brand-surface">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-left text-xs uppercase text-brand-muted">
                   <tr>
                     <th className="px-3 py-2">Fecha</th>
                     <th className="px-3 py-2">Descripción</th>
                     <th className="px-3 py-2 text-right">Monto</th>
+                    <th className="px-3 py-2" />
                   </tr>
                 </thead>
                 <tbody>
@@ -359,12 +360,20 @@ export default async function ProyectoDetailPage({
                       <td className="px-3 py-2 text-right text-brand-navy">
                         S/. {formatSoles(Number(income.amount))}
                       </td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                        <a
+                          href={`/abonos/${income.id}/editar`}
+                          className="text-xs text-brand-blue hover:underline"
+                        >
+                          Editar
+                        </a>
+                      </td>
                     </tr>
                   ))}
                   {project.incomes.length === 0 && (
                     <tr>
                       <td
-                        colSpan={3}
+                        colSpan={4}
                         className="px-3 py-6 text-center text-sm text-brand-muted"
                       >
                         Aún no hay abonos registrados.
