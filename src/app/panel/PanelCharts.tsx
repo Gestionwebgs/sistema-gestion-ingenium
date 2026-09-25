@@ -4,7 +4,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
   Tooltip,
   ResponsiveContainer,
   BarChart,
@@ -44,41 +43,56 @@ export function GastosPorProyectoChart({ data }: { data: GastoSlice[] }) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <PieChart>
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          innerRadius={55}
-          outerRadius={90}
-          paddingAngle={2}
-          strokeWidth={2}
-          stroke="#ffffff"
-        >
-          {data.map((entry, i) => (
-            <Cell key={entry.name} fill={CATEGORICAL[i % CATEGORICAL.length]} />
-          ))}
-        </Pie>
-        <Tooltip
-          formatter={(value) => formatSoles(Number(value))}
-          contentStyle={{
-            fontSize: 12,
-            borderRadius: 8,
-            border: `1px solid ${GRIDLINE}`,
-          }}
-        />
-        <Legend
-          verticalAlign="bottom"
-          height={36}
-          iconType="circle"
-          iconSize={8}
-          wrapperStyle={{ fontSize: 12, color: INK_SECONDARY }}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={220}>
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            innerRadius={55}
+            outerRadius={90}
+            paddingAngle={2}
+            strokeWidth={2}
+            stroke="#ffffff"
+          >
+            {data.map((entry, i) => (
+              <Cell key={entry.name} fill={CATEGORICAL[i % CATEGORICAL.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value) => formatSoles(Number(value))}
+            contentStyle={{
+              fontSize: 12,
+              borderRadius: 8,
+              border: `1px solid ${GRIDLINE}`,
+            }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      {/* Leyenda propia en vez de <Legend> de recharts: con muchos proyectos
+          o nombres largos, el wrapper de altura fija de recharts se salía
+          del card y tapaba lo que venía después en la página. Esta va en el
+          flujo normal del documento (nunca se sale) y trunca nombres largos
+          (título completo al pasar el mouse). */}
+      <ul className="mt-2 flex max-h-24 flex-wrap gap-x-3 gap-y-1 overflow-y-auto text-xs text-brand-muted">
+        {data.map((entry, i) => (
+          <li
+            key={entry.name}
+            title={entry.name}
+            className="flex max-w-[11rem] items-center gap-1.5"
+          >
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: CATEGORICAL[i % CATEGORICAL.length] }}
+            />
+            <span className="truncate">{entry.name}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

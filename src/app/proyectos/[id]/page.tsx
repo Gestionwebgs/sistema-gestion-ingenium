@@ -24,6 +24,28 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   OTRO: "Otro",
 };
 
+// El registro de gastos puede tener muchas filas — agruparlas por fecha (en
+// vez de una tabla plana) corta la sensación de "lista infinita" y muestra
+// un subtotal por día, sin cambiar el orden en que ya vienen (más antiguo
+// primero). Como ya vienen ordenados por fecha, agrupar por fecha formateada
+// no requiere volver a ordenar.
+function groupExpensesByDate<T extends { date: Date; amount: unknown }>(
+  expenses: T[]
+) {
+  const groups: { dateLabel: string; items: T[]; total: number }[] = [];
+  for (const expense of expenses) {
+    const dateLabel = formatDate(expense.date);
+    const last = groups[groups.length - 1];
+    if (last && last.dateLabel === dateLabel) {
+      last.items.push(expense);
+      last.total += Number(expense.amount);
+    } else {
+      groups.push({ dateLabel, items: [expense], total: Number(expense.amount) });
+    }
+  }
+  return groups;
+}
+
 export default async function ProyectoDetailPage({
   params,
 }: {
@@ -173,78 +195,79 @@ export default async function ProyectoDetailPage({
             <h2 className="mb-3 text-sm font-semibold text-brand-navy">
               Registro de gastos
             </h2>
-            <div className="overflow-x-auto rounded-lg border border-brand-border bg-brand-surface">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-left text-xs uppercase text-brand-muted">
-                  <tr>
-                    <th className="px-3 py-2">Fecha</th>
-                    <th className="px-3 py-2">Descripción</th>
-                    <th className="px-3 py-2 text-right">Monto</th>
-                    <th className="px-3 py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {project.expenses.map((expense) => (
-                    <tr key={expense.id} className="border-t border-brand-border">
-                      <td className="px-3 py-2 text-brand-muted">
-                        {formatDate(expense.date)}
-                      </td>
-                      <td className="px-3 py-2 text-brand-navy">
-                        {expense.description}
-                        {expense.operationCode && (
-                          <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-brand-muted">
-                            {expense.operationCode}
+            <div className="rounded-lg border border-brand-border bg-brand-surface">
+              {project.expenses.length === 0 && (
+                <p className="px-3 py-6 text-center text-sm text-brand-muted">
+                  Aún no hay gastos registrados.
+                </p>
+              )}
+              {groupExpensesByDate(project.expenses).map((group) => (
+                <div key={group.dateLabel}>
+                  <div className="flex items-center justify-between border-t border-brand-border bg-gray-50 px-3 py-1.5 text-xs first:border-t-0">
+                    <span className="font-medium uppercase tracking-wide text-brand-muted">
+                      {group.dateLabel}
+                    </span>
+                    <span className="text-brand-navy">
+                      S/. {formatSoles(group.total)}
+                    </span>
+                  </div>
+                  {group.items.map((expense) => (
+                    <div
+                      key={expense.id}
+                      className="flex flex-col gap-1 border-t border-brand-border px-3 py-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-brand-navy">
+                          {expense.description}
+                          {expense.operationCode && (
+                            <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-brand-muted">
+                              {expense.operationCode}
+                            </span>
+                          )}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium uppercase text-brand-blue">
+                            {expense.paidByName ?? expense.paidByUser?.name ?? expense.createdByUser.name}
                           </span>
-                        )}
-                        <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium uppercase text-brand-blue">
-                          {expense.paidByName ?? expense.paidByUser?.name ?? expense.createdByUser.name}
-                        </span>
-                        <span className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
-                          {expense.paymentSource === "PERSONAL"
-                            ? "Personal"
-                            : "Empresa"}
-                        </span>
-                        {expense.paymentMethod && (
-                          <span className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
-                            {PAYMENT_METHOD_LABELS[expense.paymentMethod]}
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
+                            {expense.paymentSource === "PERSONAL"
+                              ? "Personal"
+                              : "Empresa"}
                           </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right text-brand-navy">
-                        S/. {formatSoles(Number(expense.amount))}
-                      </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
-                        {attachmentUrlByExpenseId[expense.id] && (
+                          {expense.paymentMethod && (
+                            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-brand-muted">
+                              {PAYMENT_METHOD_LABELS[expense.paymentMethod]}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-start">
+                        <span className="text-sm font-medium text-brand-navy">
+                          S/. {formatSoles(Number(expense.amount))}
+                        </span>
+                        <div className="flex shrink-0 gap-2">
+                          {attachmentUrlByExpenseId[expense.id] && (
+                            <a
+                              href={attachmentUrlByExpenseId[expense.id]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-brand-blue hover:underline"
+                            >
+                              Ver comprobante
+                            </a>
+                          )}
                           <a
-                            href={attachmentUrlByExpenseId[expense.id]}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mr-2 text-xs text-brand-blue hover:underline"
+                            href={`/gastos/${expense.id}/editar`}
+                            className="text-xs text-brand-blue hover:underline"
                           >
-                            Ver comprobante
+                            Editar
                           </a>
-                        )}
-                        <a
-                          href={`/gastos/${expense.id}/editar`}
-                          className="text-xs text-brand-blue hover:underline"
-                        >
-                          Editar
-                        </a>
-                      </td>
-                    </tr>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                  {project.expenses.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-3 py-6 text-center text-sm text-brand-muted"
-                      >
-                        Aún no hay gastos registrados.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                </div>
+              ))}
               <form
                 action={addExpense}
                 className="flex flex-wrap items-center gap-2 border-t border-brand-border p-3"
