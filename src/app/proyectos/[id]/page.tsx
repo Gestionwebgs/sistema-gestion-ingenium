@@ -4,11 +4,29 @@ import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { getFileSignedUrl } from "@/lib/s3";
 import { addExpenseAction, addIncomeAction, addInvoiceAction } from "./actions";
+import { MonthFilter } from "./MonthFilter";
 import {
   invoiceStatus,
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_STYLES,
 } from "@/app/facturacion/status";
+
+const MONTH_NAMES_ES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+// "YYYY-MM" en UTC, para que coincida con formatDate (que también usa UTC) y
+// no se corra un día según la zona horaria del servidor.
+function monthKey(date: Date): string {
+  const d = new Date(date);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(key: string): string {
+  const [year, month] = key.split("-").map(Number);
+  return `${MONTH_NAMES_ES[month - 1]} ${year}`;
+}
 
 const formatSoles = (value: number) =>
   value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -48,10 +66,13 @@ function groupExpensesByDate<T extends { date: Date; amount: unknown }>(
 
 export default async function ProyectoDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ mes?: string }>;
 }) {
   const { id } = await params;
+  const { mes } = await searchParams;
   const session = await auth();
 
   const [project, users] = await Promise.all([
@@ -109,6 +130,31 @@ export default async function ProyectoDetailPage({
     0
   );
   const ganancia = saldoPositivo - totalGastos;
+
+  // Selector de mes: por defecto el mes en curso, para no tener que ver todo
+  // el historial del proyecto de una — pero "Control financiero" de arriba
+  // siempre usa los totales completos (totalGastos/totalAbonos/ganancia ya
+  // calculados con project.expenses/project.incomes sin filtrar), nunca los
+  // del mes elegido, para no confundir la cifra acumulada del proyecto.
+  const currentMonthKey = monthKey(new Date());
+  const monthKeysWithData = new Set([
+    ...project.expenses.map((e) => monthKey(e.date)),
+    ...project.incomes.map((i) => monthKey(i.date)),
+  ]);
+  monthKeysWithData.add(currentMonthKey);
+  const monthOptions = Array.from(monthKeysWithData)
+    .sort()
+    .reverse()
+    .map((key) => ({ value: key, label: monthLabel(key) }));
+  const selectedMonth =
+    mes && monthKeysWithData.has(mes) ? mes : currentMonthKey;
+
+  const monthExpenses = project.expenses.filter(
+    (e) => monthKey(e.date) === selectedMonth
+  );
+  const monthIncomes = project.incomes.filter(
+    (i) => monthKey(i.date) === selectedMonth
+  );
 
   const addExpense = addExpenseAction.bind(null, project.id);
   const addIncome = addIncomeAction.bind(null, project.id);
@@ -190,18 +236,25 @@ export default async function ProyectoDetailPage({
           </div>
         </div>
 
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-brand-muted">
+            Gastos y abonos de:
+          </span>
+          <MonthFilter options={monthOptions} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <section>
             <h2 className="mb-3 text-sm font-semibold text-brand-navy">
               Registro de gastos
             </h2>
             <div className="rounded-lg border border-brand-border bg-brand-surface">
-              {project.expenses.length === 0 && (
+              {monthExpenses.length === 0 && (
                 <p className="px-3 py-6 text-center text-sm text-brand-muted">
-                  Aún no hay gastos registrados.
+                  No hay gastos registrados en {monthLabel(selectedMonth)}.
                 </p>
               )}
-              {groupExpensesByDate(project.expenses).map((group) => (
+              {groupExpensesByDate(monthExpenses).map((group) => (
                 <div key={group.dateLabel}>
                   <div className="flex items-center justify-between border-t border-brand-border bg-gray-50 px-3 py-1.5 text-xs first:border-t-0">
                     <span className="font-medium uppercase tracking-wide text-brand-muted">
@@ -372,7 +425,7 @@ export default async function ProyectoDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {project.incomes.map((income) => (
+                  {monthIncomes.map((income) => (
                     <tr key={income.id} className="border-t border-brand-border">
                       <td className="px-3 py-2 text-brand-muted">
                         {formatDate(income.date)}
@@ -393,13 +446,13 @@ export default async function ProyectoDetailPage({
                       </td>
                     </tr>
                   ))}
-                  {project.incomes.length === 0 && (
+                  {monthIncomes.length === 0 && (
                     <tr>
                       <td
                         colSpan={4}
                         className="px-3 py-6 text-center text-sm text-brand-muted"
                       >
-                        Aún no hay abonos registrados.
+                        No hay abonos registrados en {monthLabel(selectedMonth)}.
                       </td>
                     </tr>
                   )}
