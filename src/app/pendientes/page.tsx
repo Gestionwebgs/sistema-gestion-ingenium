@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { Plus, Download } from "lucide-react";
-import { cycleTaskStatusAction } from "./actions";
+import { TaskStatusSelect } from "./TaskStatusSelect";
 import { ResponsableFilter } from "./ResponsableFilter";
 import { StatusFilter } from "./StatusFilter";
 
@@ -11,12 +11,6 @@ const VALID_STATUSES = new Set(["PENDIENTE", "EN_CURSO", "CERRADO"]);
 
 const formatDate = (date: Date) =>
   new Date(date).toLocaleDateString("es-PE", { timeZone: "UTC" });
-
-const STATUS_STYLES: Record<string, string> = {
-  PENDIENTE: "bg-amber-100 text-amber-700",
-  EN_CURSO: "bg-blue-100 text-blue-700",
-  CERRADO: "bg-green-100 text-green-700",
-};
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: "PENDIENTE",
@@ -107,8 +101,8 @@ export default async function PendientesPage({
           <div>
             <h1 className="text-xl font-bold text-brand-navy">Pendientes</h1>
             <p className="text-sm text-brand-muted">
-              Tareas por proyecto/cliente y de gestión interna. Toca el
-              estado para avanzarlo.
+              Tareas por proyecto/cliente y de gestión interna. Elegí el
+              estado de cada una desde su selector.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -223,19 +217,7 @@ function TaskSection({
                       </p>
                     )}
                   </div>
-                  <form
-                    action={async () => {
-                      "use server";
-                      await cycleTaskStatusAction(task.id);
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className={`shrink-0 rounded px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${STATUS_STYLES[task.status]}`}
-                    >
-                      {STATUS_LABELS[task.status]}
-                    </button>
-                  </form>
+                  <TaskStatusSelect taskId={task.id} status={task.status} />
                 </div>
               ))}
             </div>

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
-const STATUS_CYCLE = ["PENDIENTE", "EN_CURSO", "CERRADO"] as const;
+const TASK_STATUSES = ["PENDIENTE", "EN_CURSO", "CERRADO"] as const;
 
 function parseTaskFields(formData: FormData) {
   const section = String(formData.get("section") ?? "PROYECTOS") as
@@ -102,21 +102,21 @@ export async function deletePendingTaskAction(taskId: string) {
   redirect("/pendientes");
 }
 
-export async function cycleTaskStatusAction(taskId: string) {
+export async function setTaskStatusAction(
+  taskId: string,
+  status: (typeof TASK_STATUSES)[number]
+) {
   const session = await auth();
   if (session?.user.role !== "OWNER") {
     throw new Error("Solo el administrador puede actualizar pendientes");
   }
-
-  const task = await prisma.pendingTask.findUniqueOrThrow({
-    where: { id: taskId },
-  });
-  const nextIndex =
-    (STATUS_CYCLE.indexOf(task.status) + 1) % STATUS_CYCLE.length;
+  if (!TASK_STATUSES.includes(status)) {
+    throw new Error("Estado inválido");
+  }
 
   await prisma.pendingTask.update({
     where: { id: taskId },
-    data: { status: STATUS_CYCLE[nextIndex] },
+    data: { status },
   });
 
   revalidatePath("/pendientes");
