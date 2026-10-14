@@ -15,6 +15,7 @@ export function ResponsableFilter({ options }: { options: string[] }) {
         const params = new URLSearchParams(searchParams.toString());
         if (value) params.set("responsable", value);
         else params.delete("responsable");
+        params.delete("pagina");
         const query = params.toString();
         router.push(`/pendientes${query ? `?${query}` : ""}`);
       }}

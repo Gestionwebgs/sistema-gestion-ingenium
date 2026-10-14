@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { empresaHref } from "./query";
 
 const TASK_STATUSES = ["PENDIENTE", "EN_CURSO", "CERRADO"] as const;
 
@@ -69,7 +70,7 @@ export async function createPendingTaskAction(formData: FormData) {
     },
   });
 
-  redirect("/pendientes");
+  redirect(empresaHref(fields.section, fields.groupName));
 }
 
 export async function updatePendingTaskAction(
@@ -88,7 +89,7 @@ export async function updatePendingTaskAction(
     data: fields,
   });
 
-  redirect("/pendientes");
+  redirect(empresaHref(fields.section, fields.groupName));
 }
 
 export async function deletePendingTaskAction(taskId: string) {
@@ -97,9 +98,9 @@ export async function deletePendingTaskAction(taskId: string) {
     throw new Error("Solo el administrador puede eliminar pendientes");
   }
 
-  await prisma.pendingTask.delete({ where: { id: taskId } });
+  const deleted = await prisma.pendingTask.delete({ where: { id: taskId } });
 
-  redirect("/pendientes");
+  redirect(empresaHref(deleted.section, deleted.groupName));
 }
 
 export async function setTaskStatusAction(

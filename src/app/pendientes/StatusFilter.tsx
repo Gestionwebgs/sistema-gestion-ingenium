@@ -21,6 +21,7 @@ export function StatusFilter() {
         const params = new URLSearchParams(searchParams.toString());
         if (value) params.set("estado", value);
         else params.delete("estado");
+        params.delete("pagina");
         const query = params.toString();
         router.push(`/pendientes${query ? `?${query}` : ""}`);
       }}

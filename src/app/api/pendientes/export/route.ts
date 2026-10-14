@@ -45,7 +45,14 @@ export async function GET(request: Request) {
   const estado =
     estadoParam && VALID_STATUSES.has(estadoParam) ? estadoParam : null;
 
+  const empresa = searchParams.get("empresa") || null;
+  const seccion =
+    searchParams.get("seccion") === "GESTION_INTERNA"
+      ? "GESTION_INTERNA"
+      : "PROYECTOS";
+
   const filter = {
+    ...(empresa ? { section: seccion as "PROYECTOS" | "GESTION_INTERNA", groupName: empresa } : {}),
     ...(responsable ? { responsibleName: responsable } : {}),
     ...(estado
       ? { status: estado as "PENDIENTE" | "EN_CURSO" | "CERRADO" }
@@ -102,6 +109,7 @@ export async function GET(request: Request) {
   const buffer = await workbook.xlsx.writeBuffer();
 
   const nameParts = ["pendientes"];
+  if (empresa) nameParts.push(sanitizeForFilename(empresa));
   if (responsable) nameParts.push(sanitizeForFilename(responsable));
   if (estado) nameParts.push(sanitizeForFilename(STATUS_LABELS[estado]));
   const fileName = `${nameParts.join("_")}.xlsx`;
