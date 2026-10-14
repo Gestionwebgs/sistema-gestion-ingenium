@@ -4,7 +4,7 @@ Este archivo es el contexto persistente del proyecto para Claude Code. Léelo an
 
 ## Estado del proyecto
 
-Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Autenticación con Auth.js v5 (Credentials contra la tabla `users`, sesión JWT con id/role, login/logout, rutas protegidas vía `src/proxy.ts`) implementada y verificada. Seed (`prisma/seed.ts`, vía `npx prisma db seed`) crea las 5 líneas de negocio y el usuario OWNER real (credenciales en `.env`, no en el código — ver `SEED_OWNER_*`). Identidad visual (logo, colores de marca, íconos Lucide) aplicada. Primera pantalla de proyecto (`/proyectos/nuevo`, `/proyectos/[id]`) funcionando, con cálculo de saldo positivo verificado contra el Excel real del cliente. Captura rápida de facturas con OCR (`/capturas/nueva`, `/capturas`) implementada y verificada. App mobile-first (sidebar en desktop, barra inferior en celular). Desplegada por el usuario en una segunda máquina vía túnel de Cloudflare para que el cliente la pruebe (base de datos independiente de la de desarrollo).
+Scaffolding inicial completo: Next.js (TypeScript + Tailwind, App Router) + Prisma con el schema del modelo de datos validado, migrado contra Postgres local. Autenticación con Auth.js v5 (Credentials contra la tabla `users`, sesión JWT con id/role, login/logout, rutas protegidas vía `src/proxy.ts`) implementada y verificada. Seed (`prisma/seed.ts`, vía `npx prisma db seed`) crea las 5 líneas de negocio y el usuario OWNER real (credenciales en `.env`, no en el código — ver `SEED_OWNER_*`). Identidad visual (logo, colores de marca, íconos Lucide) aplicada. Primera pantalla de proyecto (`/proyectos/nuevo`, `/proyectos/[id]`) funcionando, con cálculo de saldo positivo verificado contra el Excel real del cliente. Captura rápida de facturas con OCR (`/capturas/nueva`, `/capturas`) implementada y verificada. App mobile-first (sidebar en desktop, barra inferior en celular). **Producción hoy:** una EC2 en AWS (`https://gestion.ingeniumservicesac.com`), desplegada con Terraform — ver "Despliegue en AWS con Terraform" y "Operación diaria desde la computadora principal". (La demo por túnel de Cloudflare en una segunda máquina fue la etapa previa.)
 
 **Permisos por rol (`OWNER` vs `RESPONSABLE`):**
 - **OWNER**: todo — crear/editar usuarios, crear proyectos, préstamos (de cualquiera), reembolsos, dashboard general de toda la empresa.
@@ -175,10 +175,10 @@ Diseñar el modelo de datos y la arquitectura pensando en que más adelante se a
 ## Stack tecnológico
 
 - **Frontend:** Next.js + TypeScript + Tailwind CSS, con la paleta de marca de arriba.
-- **Base de datos:** PostgreSQL en Amazon RDS (no Supabase) — administrado, con backups automáticos, fácil de exportar/migrar entre cuentas AWS.
+- **Base de datos:** PostgreSQL en Amazon RDS (no Supabase) — administrado, con backups automáticos, fácil de exportar/migrar entre cuentas AWS. **(Plan original; lo realmente desplegado es Postgres en Docker dentro de una sola EC2 — ver "Despliegue en AWS con Terraform".)**
 - **Archivos** (fotos/PDF de facturas): Amazon S3.
 - **Autenticación:** NextAuth.js contra la base Postgres (multiusuario, sin depender de Cognito).
-- **Hosting:** AWS App Runner (despliega el contenedor de la app sin administrar servidores).
+- **Hosting:** AWS App Runner (despliega el contenedor de la app sin administrar servidores). **(Plan original; lo realmente desplegado es una EC2 con systemd + Caddy — ver "Despliegue en AWS con Terraform".)**
 - **Infraestructura como código:** Terraform. Toda la infraestructura (RDS, S3, App Runner, IAM, etc.) debe quedar definida en Terraform para poder redesplegar el sistema completo en otra cuenta AWS ejecutando el mismo código.
 
 ## Plan de despliegue en fases
@@ -197,6 +197,8 @@ Diseñar el modelo de datos y la arquitectura pensando en que más adelante se a
 ## Sesión de despliegue local + hallazgos pendientes (2026-08-14)
 
 ### Flujo de trabajo acordado entre las dos computadoras
+
+> **Histórico (2026-08-14).** Desde el 2026-09-12 todo el trabajo se hace desde una sola computadora (la nueva) y la demo por túnel de Cloudflare ya no se usa: producción está en AWS. Ver "Operación diaria desde la computadora principal" más abajo.
 
 - **Desarrollo de código** (nuevas funciones, cambios que pida el cliente): se hace en la computadora de la oficina, con Claude Code, como hasta ahora. Se sube con `git push`.
 - **Esta segunda computadora (Windows, Git Bash)**: se usa para alojar una demo accesible por internet para que el cliente pruebe. Stack: `docker compose up -d` (Postgres local puerto 5433 + MinIO puerto 9000/9001), `npm run build && npm run start` (puerto 3000), y `cloudflared tunnel --url http://localhost:3000` (Quick Tunnel, sin cuenta de Cloudflare, URL tipo `*.trycloudflare.com`, cambia cada vez que se reinicia cloudflared).
@@ -222,7 +224,9 @@ Se revisaron a fondo, además de la hoja "CIMENTACION PAMOLSA" (ya usada de ejem
 
 Los hallazgos 1-3 fueron resueltos en sesiones posteriores (ambas computadoras). Ver "## Pendientes reales (actualizado 2026-08-22)" más abajo para la lista vigente de lo que falta.
 
-## Pendientes reales (actualizado 2026-08-22)
+## Pendientes reales (actualizado 2026-08-22) — HISTÓRICO
+
+> La lista vigente está en "Pendientes reales (actualizado 2026-10-14)", más abajo. Esta se conserva por el detalle de las decisiones que dejó en pausa.
 
 - **Alertas por correo — pedido ampliado (2026-08-22): no es solo facturas, es notificaciones diarias/semanales de los `PendingTask` (Pendientes) por persona responsable.** Analizado con el usuario antes de tocar código, quedaron **dos decisiones en pausa** (el usuario las va a resolver y volvemos):
   - **Proveedor de correo**: todavía no elegido — el usuario va a estudiarlo (mencionó que probablemente arme su propio servidor de correo). No asumir Gmail/SES/otro hasta que confirme.
@@ -242,18 +246,26 @@ Los hallazgos 1-3 fueron resueltos en sesiones posteriores (ambas computadoras).
 Para no tener que volver a buscar todo esto la próxima vez que haya que
 desplegar un cambio o tocar la infraestructura:
 
-**Conectarse por SSH al servidor:**
+**Conectarse por SSH al servidor** (clave de la computadora nueva; la
+`ingenium_aws_ed25519` vieja se sacó del servidor el 2026-09-12):
 ```
-ssh -i ~/.ssh/ingenium_aws_ed25519 ubuntu@18.209.97.100
+ssh -i ~/.ssh/ingenium_aws_ed25519_new ubuntu@18.209.97.100
 ```
-(la IP es fija — IP elástica de AWS — no cambia aunque se reinicie el
-servidor. Si en algún momento no se sabe la IP actual, correr
-`terraform output ip_publica` desde `infra/`.)
+(la IP del servidor es fija — IP elástica de AWS — no cambia aunque se
+reinicie. Si en algún momento no se sabe, correr `terraform output
+ip_publica` desde `infra/`. Lo que SÍ cambia es la IP pública de la
+computadora del usuario — ver "Operación diaria" más abajo.)
 
 **Desplegar un cambio nuevo de código en el servidor** (una vez conectado
-por SSH):
+por SSH). El servidor siempre tiene 2 cambios locales inofensivos (el bit de
+ejecutable de `deploy.sh` y un `package-lock.json` regenerado en Linux) que
+bloquean el `git pull`, por eso se guardan y descartan primero:
 ```
 cd /opt/ingenium/sistema-gestion-ingenium
+git stash
+git pull
+git stash drop
+chmod +x deploy/deploy.sh
 ./deploy/deploy.sh
 ```
 
@@ -264,11 +276,10 @@ cd sistema-gestion-ingenium/infra
 terraform plan
 terraform apply
 ```
-AWS CLI ya está configurado en esa computadora (`aws configure`, usuario
-IAM `admin-gerson`, región `us-east-1`) — no hace falta volver a
-configurarlo salvo que se use OTRA computadora, ahí sí habría que repetir
-`aws configure` con las mismas access keys (o generar unas nuevas desde
-IAM si no se tienen a mano).
+AWS CLI ya está configurado en la computadora nueva (`aws configure`, usuario
+IAM `admin-gerson`, región `us-east-1`, access key creado el 2026-09-12
+específicamente para esa máquina). Si se usa OTRA computadora, generar un
+access key nuevo desde IAM en vez de copiar el de esta.
 
 **Datos de referencia de esta cuenta/servidor:**
 - Account ID de AWS: `166390306910`
@@ -479,3 +490,60 @@ El usuario compartió `Relacion de Ordenes.xlsx` — la hoja donde llevan, a fin
 ## Nota: recuperación de una pérdida accidental de documentación (2026-09-04)
 
 El commit de despliegue en AWS (`a63eed7`, hecho en la otra computadora) llegó con `CLAUDE.md` basado en una copia vieja del archivo — probablemente un editor con el archivo abierto desde antes de hacer `git pull`, que sobreescribió el archivo entero al guardar. Resultado: además de agregar la sección de AWS (que sí quedó bien y se conservó tal cual), el commit **borró** las secciones "Revisión cruzada", "Préstamos de terceros: tasa de interés", "Cotizaciones" y "Facturación" (las 4 de arriba, ahora restauradas), y **revirtió** la nota del bug de `/capturas` a su versión "no corregir todavía" aunque el código arreglado seguía intacto. Ningún archivo de código ni migración se vio afectado — se verificó con `git show --stat` que el commit solo tocó archivos de `infra/`, `deploy/`, `docker-compose.prod.yml`, `Caddyfile`, `.env.production.example`, `src/lib/s3.ts` y `CLAUDE.md`. Se restauró el contenido perdido a mano comparando contra el commit anterior (`b841927`). **Lección para la próxima**: antes de editar `CLAUDE.md` a mano en cualquier computadora, asegurarse de tener el archivo recién traído con `git pull`, no una pestaña de editor vieja.
+
+## Operación diaria desde la computadora principal (2026-09-12 → 2026-10-14)
+
+Desde el 2026-09-12 el proyecto se maneja desde **una sola computadora (la nueva, `LAPTOP-BNFQHN1O`)**, con el repo en `C:\Users\Gerson\proyectos\sistema-gestion-ingenium`. La computadora vieja ya no es la principal. Terminal: Git Bash (no WSL).
+
+**Estado de Terraform (importante).** `infra/terraform.tfstate` y `infra/terraform.tfvars` NO están en git y no hay backend remoto: **el único estado vigente vive en esta computadora**. La copia de la computadora vieja quedó obsoleta (no correr `plan`/`apply` desde allá sin traer primero el estado actual). Hacer copias de respaldo de `infra/` fuera de git.
+
+**Acciones que Claude Code no puede ejecutar y corre el usuario en su Git Bash:** `terraform apply`, `git push` (la primera vez abre login de GitHub vía Git Credential Manager en el navegador) y cualquier comando por SSH que modifique el servidor (`git stash/pull`, `deploy.sh`, editar `authorized_keys`). `terraform plan` y los comandos de lectura sí los corre Claude. En sesiones de Bash ya abiertas `terraform` puede no estar en el PATH (se instaló con winget); ruta completa: `/c/Users/Gerson/AppData/Local/Microsoft/WinGet/Packages/Hashicorp.Terraform_Microsoft.Winget.Source_8wekyb3d8bbwe/terraform.exe`.
+
+**La IP pública de esta computadora cambia cada pocos días** (ISP dinámica) y el Security Group solo permite SSH desde una IP exacta. Cuando el SSH da `Connection timed out`:
+1. `curl -s https://checkip.amazonaws.com` y comparar con `ssh_allowed_cidr` en `infra/terraform.tfvars`.
+2. Si cambió, editar esa línea (formato `"x.x.x.x/32"`), correr `terraform plan` (debe dar `0 to add, 1 to change, 0 to destroy`, solo el Security Group) y que el usuario corra `terraform apply`.
+Historial: `79.116.174.197` → `188.26.195.135` (2026-09-22) → `188.26.195.177` (2026-10-14). Alternativa evaluada y NO aplicada: permitir el `/24` completo (más cómodo, abre a 256 direcciones).
+
+**Protección de la instancia.** `infra/main.tf` tiene `lifecycle { ignore_changes = [ami] }` en `aws_instance.app`. Sin eso, un `apply` cualquiera podía resolver una AMI de Ubuntu más nueva y **reemplazar el servidor entero** (disco y base de datos incluidos); ya pasó una vez y se recuperó de un snapshot de DLM. Verificado el 2026-10-14: AWS publicó otra AMI y el plan no tocó la instancia.
+
+**`infra/user_data.sh` debe quedar con fin de línea LF.** Terraform calcula el hash del archivo tal cual está en disco; el checkout en Windows (`core.autocrlf=true`) lo deja en CRLF y el plan muestra un cambio falso del `user_data` de la instancia. Se normaliza con `sed -i 's/\r$//' infra/user_data.sh`. Por eso `git status` lo muestra siempre como modificado sin diferencias reales.
+
+**Otros detalles del entorno local:**
+- `docker-compose.yml` usa `quay.io/minio/minio:latest` (Docker Hub dejó de servir `minio/minio`).
+- `package.json` tiene `allowScripts` (npm 11 bloquea los postinstall hasta aprobarlos con `npm approve-scripts`).
+- Tras reiniciar la computadora Docker Desktop no arranca solo: `docker desktop start`, esperar ~100 s y `docker compose up -d`.
+- Los puertos 3000/3001 suelen estar ocupados por otros proyectos del usuario en Docker; la vista previa usa `autoPort`.
+- Credenciales de la base local de desarrollo: ver `.env` (copiado a mano desde la computadora vieja; no está en git).
+- El deploy en producción tarda de 1 a 8 minutos en el `npm run build` (instancia `t3.micro`, usa swap); no es una falla.
+
+## Funciones construidas desde la computadora nueva (2026-09-12 → 2026-10-14)
+
+- **Importador de proyectos** (`src/app/proyectos/importar/actions.ts`): `readTable` ahora corta al llegar a una fila de resumen (descripción que empieza con TOTAL, SALDO, GANANCIA o PENDIENTE). Antes leía esa fila como un gasto/abono más (con el monto total de la columna). **Limitación:** la corrección se probó con la lógica, no con el Excel real del cliente; los proyectos importados antes del arreglo pueden conservar esa fila fantasma.
+- **Préstamos personales** (`/prestamos/nuevo`, `createPersonalLoanAction`): registra un aporte de liquidez de alguien del equipo como un `Expense` con `paymentSource = PERSONAL` y sin proyecto, sin comprobante. Reutiliza el cálculo de saldo pendiente existente; no hay modelo nuevo.
+- **Abonos**: `/abonos/[id]/editar` y `updateIncomeAction` (antes solo se podían crear). **Ni gastos ni abonos tienen opción de eliminar**, solo editar.
+- **Ficha del proyecto**: el registro de gastos pasó de tabla a tarjetas agrupadas por fecha con subtotal diario (con tabla, la columna "Editar" quedaba recortada). Selector de mes (`?mes=YYYY-MM`, por defecto el mes en curso) que filtra solo las listas de gastos y abonos; los totales de "Control financiero" siguen siendo los del proyecto completo.
+- **Panel general**: el gráfico "Gastos por proyecto" usa una leyenda propia (la de recharts se salía de la tarjeta con nombres largos).
+- **Pendientes** (`src/app/pendientes/`): la pantalla principal es un **tablero de tarjetas por empresa** (`EmpresaCards.tsx`: total, barra de avance y conteo por estado; proyectos y gestión interna en bloques separados). Al abrir una tarjeta (`?empresa=<groupName>&seccion=<PROYECTOS|GESTION_INTERNA>`) se ve `EmpresaDetalle.tsx`: lista ordenada (abiertos primero, luego importancia y vencimiento; vencidos en rojo), chips de estado con conteo y **paginación de 10** (`?pagina=`). Filtros por responsable y por estado en ambas vistas (vuelven a la página 1 al cambiar). El estado se elige con un selector por fila (`TaskStatusSelect.tsx`, `setTaskStatusAction`, que reemplazó a `cycleTaskStatusAction`). Crear/editar/borrar un pendiente vuelve a la empresa. Los helpers de URL están en `query.ts`.
+- **Descarga en Excel de Pendientes** (`/api/pendientes/export`): respeta los filtros activos (responsable, estado y empresa abierta). Sin filtros baja todo.
+
+## Pendientes reales (actualizado 2026-10-14)
+
+Revisión hecha el 2026-10-14 con el AWS CLI (solo lectura; el conector MCP de AWS pedía autenticación). Estado verificado: instancia `t3.micro` `running` con chequeos `ok/ok`, disco de 30 GB cifrado, IP elástica asociada, SSH solo desde la IP del usuario, snapshot diario más reciente del mismo día, S3 con acceso público bloqueado + versionado, MFA activo en la cuenta raíz y en `admin-gerson`, sin access keys de la raíz. La instancia se lanzó el 2026-09-12 15:26 UTC (es la recreación que motivó el `ignore_changes` de la AMI).
+
+**Resuelto / preparado hoy**
+- **Cuota de vCPU aprobada:** "Running On-Demand Standard" está en 8, así que `t3.medium` ya está permitido (ver pendiente 2).
+- **Next.js 16.3.1 → 16.4.1** (y `eslint-config-next` igual): corrige la vulnerabilidad crítica de `next` (cache poisoning en SSG/ISR autoalojado, SSRF en el optimizador de imágenes, etc.) más arreglos sin ruptura de `npm audit fix` (`sharp` 0.35.5 y otras). Probado en local: `tsc`, `next build` y las páginas principales con sesión. **Cambio local, todavía sin desplegar a producción.** Prisma se mantiene en 7.9.1 (CLI, cliente y adaptador deben ir iguales); `allowScripts` quedó con sus entradas 7.9.1.
+- **`.gitattributes`** fuerza LF en `*.sh` y `*.tf`; con eso `infra/user_data.sh` deja de aparecer modificado y su hash coincide con el desplegado.
+
+**Pendientes (por prioridad)**
+1. **Desactivar el access key IAM viejo** `AKIASNPNCTBPEYM7RUME` (creado 2026-08-29, **sigue Active**, último uso 2026-09-12 15:48 UTC). Lo corre el usuario (Claude Code no puede modificar IAM): `aws iam update-access-key --user-name admin-gerson --access-key-id AKIASNPNCTBPEYM7RUME --status Inactive`. Es reversible.
+2. **Subir a `t3.medium`** (hoy 909 MB de RAM, build de 2–8 min usando swap): borrar la línea `instance_type = "t3.micro"` de `infra/terraform.tfvars`, `terraform plan` y que el usuario corra `terraform apply`. Reinicia la instancia unos minutos; la IP elástica y el disco se conservan. Costo aproximado: USD 30/mes más que la capa gratuita.
+3. **No existe ninguna alarma de CloudWatch:** `alert_email` está vacío en `terraform.tfvars`. Completarlo, aplicar y confirmar la suscripción SNS desde el correo.
+4. **Respaldo de `infra/terraform.tfstate` y `terraform.tfvars` fuera de esta computadora** (hoy no existe ninguna copia).
+5. **IP pública dinámica** del usuario: cada cambio exige actualizar el Security Group (ver "Operación diaria").
+6. **Node 20 en el servidor:** el SDK de AWS y `@prisma/streams-local` piden Node >= 22 (el aviso del SDK corre desde enero de 2027).
+7. **Snapshots del disco anterior:** hay 7 snapshots del volumen previo a la recreación del 2026-09-12 (`vol-0af7669108c1d112b`) que DLM ya no administra, además de los 7 vigentes. Borrarlos cuando se confirme que no hacen falta (costo mínimo; son un respaldo de la base anterior).
+8. **Eliminar gastos y abonos:** no existe la opción. Además, revisar en producción los proyectos importados antes de la corrección del importador por si quedó una fila TOTAL fantasma, y probar el importador con el Excel real.
+9. **Alertas por correo de los pendientes:** siguen en pausa (falta elegir proveedor de correo y cómo ligar cada responsable a un correo real — ver la sección histórica de 2026-08-22).
+10. **App móvil / PWA:** sin fecha.
+11. **`npm audit`:** quedan 11 (2 moderadas, 9 altas), todas en herramientas de desarrollo (`eslint-config-next`, el CLI de Prisma) y en `uuid`/`exceljs`. Sin efecto en producción y sin arreglo aplicable sin cambios incompatibles (npm sugiere bajar a Prisma 6, lo cual no corresponde).

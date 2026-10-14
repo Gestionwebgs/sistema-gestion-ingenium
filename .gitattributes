@@ -1,0 +1,5 @@
+# Fin de línea LF para lo que se ejecuta en Linux o alimenta a Terraform.
+# Sin esto, el checkout en Windows (core.autocrlf=true) deja infra/user_data.sh en
+# CRLF y Terraform calcula un hash distinto al de la instancia desplegada.
+*.sh text eol=lf
+*.tf text eol=lf
